@@ -10,6 +10,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+
       - uses: actions/setup-node@v4
         with:
           node-version: '20'
@@ -18,27 +19,17 @@ jobs:
         run: npm install -g vercel@latest
 
       - name: Deploy to Vercel
-        env:
-          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
         run: |
-          # Link or create project named bee-doo-portal
-          vercel link --yes --project bee-doo-portal --token=$VERCEL_TOKEN || \
-          vercel link --yes --token=$VERCEL_TOKEN || true
+          OUTPUT=$(vercel deploy --prod --yes --token="${{ secrets.VERCEL_TOKEN }}" 2>&1)
+          echo "$OUTPUT"
           
-          # Set env vars
-          vercel env add NEXT_PUBLIC_SUPABASE_URL production --token=$VERCEL_TOKEN <<< "${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}" 2>/dev/null || true
-          vercel env add NEXT_PUBLIC_SUPABASE_ANON_KEY production --token=$VERCEL_TOKEN <<< "${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}" 2>/dev/null || true
-          vercel env add TWILIO_ACCOUNT_SID production --token=$VERCEL_TOKEN <<< "${{ secrets.TWILIO_ACCOUNT_SID }}" 2>/dev/null || true
-          vercel env add TWILIO_AUTH_TOKEN production --token=$VERCEL_TOKEN <<< "${{ secrets.TWILIO_AUTH_TOKEN }}" 2>/dev/null || true
-          vercel env add TWILIO_WHATSAPP_FROM production --token=$VERCEL_TOKEN <<< "${{ secrets.TWILIO_WHATSAPP_FROM }}" 2>/dev/null || true
-          vercel env add NEXT_PUBLIC_APP_URL production --token=$VERCEL_TOKEN <<< "https://portal.bee-doo.de" 2>/dev/null || true
-          
-          # Deploy to production
-          echo "=== DEPLOYING ==="
-          DEPLOY_URL=$(vercel deploy --prod --yes --token=$VERCEL_TOKEN 2>&1)
-          echo "=== RESULT ==="
-          echo "$DEPLOY_URL"
-          echo "=== DONE ==="
-          
-          # Get project info
-          vercel ls --token=$VERCEL_TOKEN 2>&1 | head -10
+          # Extract and test the deploy URL
+          URL=$(echo "$OUTPUT" | grep -oE 'https://[^[:space:]]+\.vercel\.app' | tail -1)
+          if [ -n "$URL" ]; then
+            echo "✅ Deployed: $URL"
+            # Check if it's actually working
+            STATUS=$(curl -s -o /dev/null -w "%{http_code}" "$URL")
+            echo "HTTP Status: $STATUS"
+          else
+            echo "❌ No URL found in output"
+          fi
