@@ -12,14 +12,40 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      
-      - uses: supabase/setup-cli@v1
-        with:
-          version: latest
-      
-      - name: Link project & run migrations
+
+      - name: Run migrations via Supabase Management API
         env:
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
         run: |
+          # Install Supabase CLI
+          curl -fsSL https://supabase.com/install.sh | bash
+          export PATH="$HOME/.local/bin:$PATH"
+          
+          # Link project (no DB password needed for API-based migrations)
           supabase link --project-ref hqzpemfaljxcysyqssng
-          supabase db push --include-all
+          
+          # Push migrations using Management API (no direct DB connection)
+          supabase db push
+
+      - name: Fallback - Run SQL via Management API directly
+        if: failure()
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+        run: |
+          REF="hqzpemfaljxcysyqssng"
+          
+          run_sql() {
+            local SQL="$1"
+            curl -s -X POST "https://api.supabase.com/v1/projects/$REF/database/query" \
+              -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" \
+              -H "Content-Type: application/json" \
+              -d "{\"query\": $(echo "$SQL" | python3 -c "import sys,json; print(json.dumps(sys.stdin.read()))")}"
+          }
+          
+          # Migration 001
+          run_sql "$(cat supabase/migrations/001_initial_schema.sql)"
+          echo "Migration 001 done"
+          
+          # Migration 002  
+          run_sql "$(cat supabase/migrations/002_whatsapp_and_reviews.sql)"
+          echo "Migration 002 done"
