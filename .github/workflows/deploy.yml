@@ -10,29 +10,81 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
         with:
           node-version: '20'
 
       - name: Install Vercel CLI
         run: npm install -g vercel@latest
 
-      - name: Deploy to Vercel
-        id: deploy
+      - name: Create Vercel project config
         run: |
-          vercel deploy --prod --yes --token="${{ secrets.VERCEL_TOKEN }}" 2>&1 | tee /tmp/out.txt
-          URL=$(grep -oE "https://[^[:space:]]+\.vercel\.app" /tmp/out.txt | tail -1)
-          echo "url=$URL" >> $GITHUB_OUTPUT
-          echo "✅ Deployed: $URL"
+          mkdir -p .vercel
+          # Create a project via Vercel API
+          PROJECT=$(curl -s -X POST "https://api.vercel.com/v9/projects" \
+            -H "Authorization: Bearer ${{ secrets.VERCEL_TOKEN }}" \
+            -H "Content-Type: application/json" \
+            -d '{
+              "name": "bee-doo-portal",
+              "framework": "nextjs",
+              "gitRepository": {
+                "repo": "beedoo-ux/bee-doo-portal",
+                "type": "github"
+              }
+            }' 2>&1)
+          echo "Project response: $PROJECT"
+          
+          # Get project ID (works for new or existing)
+          PROJECT_ID=$(echo $PROJECT | python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('id', d.get('error',{}).get('id','')))" 2>/dev/null || \
+            curl -s "https://api.vercel.com/v9/projects/bee-doo-portal" \
+              -H "Authorization: Bearer ${{ secrets.VERCEL_TOKEN }}" | python3 -c "import sys,json; d=json.load(sys.stdin); print(d['id'])")
+          
+          # Get org/team ID
+          ORG=$(curl -s "https://api.vercel.com/v2/user" \
+            -H "Authorization: Bearer ${{ secrets.VERCEL_TOKEN }}" | python3 -c "import sys,json; d=json.load(sys.stdin); print(d['user']['id'])")
+          
+          echo "Project ID: $PROJECT_ID"
+          echo "Org ID: $ORG"
+          
+          # Create project.json
+          cat > .vercel/project.json << EOF
+          {"projectId":"$PROJECT_ID","orgId":"$ORG"}
+          EOF
+          cat .vercel/project.json
 
-      - name: Write deploy URL to file
+      - name: Set environment variables
         run: |
-          echo "DEPLOY_URL=${{ steps.deploy.outputs.url }}" > DEPLOY_URL.txt
-          cat DEPLOY_URL.txt
+          PID=$(python3 -c "import json; d=json.load(open('.vercel/project.json')); print(d['projectId'])")
+          
+          set_env() {
+            local key=$1
+            local value=$2
+            # Remove existing
+            curl -s -X DELETE "https://api.vercel.com/v9/projects/$PID/env/$key" \
+              -H "Authorization: Bearer ${{ secrets.VERCEL_TOKEN }}" 2>/dev/null || true
+            # Add new
+            curl -s -X POST "https://api.vercel.com/v9/projects/$PID/env" \
+              -H "Authorization: Bearer ${{ secrets.VERCEL_TOKEN }}" \
+              -H "Content-Type: application/json" \
+              -d "{\"key\":\"$key\",\"value\":\"$value\",\"type\":\"plain\",\"target\":[\"production\",\"preview\"]}"
+          }
+          
+          set_env "NEXT_PUBLIC_SUPABASE_URL" "https://hqzpemfaljxcysyqssng.supabase.co"
+          set_env "NEXT_PUBLIC_SUPABASE_ANON_KEY" "${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}"
+          set_env "NEXT_PUBLIC_APP_URL" "https://bee-doo-portal.vercel.app"
+          set_env "SUPABASE_SERVICE_ROLE_KEY" "${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}"
+          echo "Env vars set ✓"
 
-      - name: Commit deploy URL
-        uses: stefanzweifel/git-auto-commit-action@v5
-        with:
-          commit_message: "ci: update DEPLOY_URL [skip ci]"
-          file_pattern: DEPLOY_URL.txt
-          push_options: '--force'
+      - name: Pull Vercel config
+        run: vercel pull --yes --environment=production --token=${{ secrets.VERCEL_TOKEN }}
+
+      - name: Build
+        run: vercel build --prod --token=${{ secrets.VERCEL_TOKEN }}
+
+      - name: Deploy
+        run: |
+          DEPLOY_URL=$(vercel deploy --prebuilt --prod --token=${{ secrets.VERCEL_TOKEN }})
+          echo "🚀 Deployed: $DEPLOY_URL"
+          echo "DEPLOY_URL=$DEPLOY_URL" >> $GITHUB_STEP_SUMMARY
