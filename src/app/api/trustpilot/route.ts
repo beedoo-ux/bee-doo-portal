@@ -4,7 +4,9 @@
 // Öffentlicher GET-Endpoint für das Portal
 // =============================================================
 import { NextRequest, NextResponse } from 'next/server';
-import { createServerSupabase } from '@/lib/supabase';
+
+export const dynamic = 'force-dynamic';
+import { createServerSupabase } from '@/lib/supabase-server';
 
 const TP_API_KEY       = process.env.TRUSTPILOT_API_KEY!;
 const TP_BUSINESS_ID   = process.env.TRUSTPILOT_BUSINESS_UNIT_ID!;
