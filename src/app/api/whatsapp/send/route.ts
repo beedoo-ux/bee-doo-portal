@@ -4,7 +4,7 @@
 // Wird aufgerufen wenn sich ein Milestone-Status ändert
 // =============================================================
 import { NextRequest, NextResponse } from 'next/server';
-import { createServerSupabase } from '@/lib/supabase';
+import { createServerSupabase } from '@/lib/supabase-server';
 
 const TWILIO_SID       = process.env.TWILIO_ACCOUNT_SID!;   // from env
 const TWILIO_AUTH      = process.env.TWILIO_AUTH_TOKEN!;     // d962c4...
@@ -77,7 +77,7 @@ export async function POST(request: NextRequest) {
       .from('customers')
       .select('id, first_name, phone, customer_number')
       .eq('id', customerId)
-      .single();
+      .single() as { data: { id: string; first_name: string; phone: string; customer_number: string } | null; error: unknown };
 
     if (cErr || !customer?.phone) {
       return NextResponse.json({ error: 'Kunde nicht gefunden oder keine Telefonnummer' }, { status: 404 });
