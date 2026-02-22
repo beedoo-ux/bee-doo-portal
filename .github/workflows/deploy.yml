@@ -8,6 +8,11 @@ on:
 jobs:
   deploy:
     runs-on: ubuntu-latest
+    env:
+      VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+      NEXT_PUBLIC_SUPABASE_URL: https://hqzpemfaljxcysyqssng.supabase.co
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
+      NEXT_PUBLIC_APP_URL: https://bee-doo-portal.vercel.app
     steps:
       - uses: actions/checkout@v4
 
@@ -19,71 +24,52 @@ jobs:
       - name: Install Vercel CLI
         run: npm install -g vercel@latest
 
-      - name: Link Vercel project and set env vars
-        env:
-          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
-          ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
-          SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+      - name: Link Vercel project
         run: |
-          # Get or create project
-          PROJECT=$(curl -s -X POST "https://api.vercel.com/v9/projects" \
+          mkdir -p .vercel
+          
+          # Try to create project (returns existing if name taken)
+          RESP=$(curl -sf -X POST "https://api.vercel.com/v9/projects" \
             -H "Authorization: Bearer $VERCEL_TOKEN" \
             -H "Content-Type: application/json" \
-            -d '{"name":"bee-doo-portal","framework":"nextjs"}')
-          
-          PROJECT_ID=$(echo "$PROJECT" | python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('id',''))" 2>/dev/null)
-          if [ -z "$PROJECT_ID" ]; then
-            PROJECT_ID=$(curl -s "https://api.vercel.com/v9/projects/bee-doo-portal" \
-              -H "Authorization: Bearer $VERCEL_TOKEN" | python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('id',''))")
-          fi
-          
-          ORG_ID=$(curl -s "https://api.vercel.com/v2/user" \
-            -H "Authorization: Bearer $VERCEL_TOKEN" | python3 -c "import sys,json; d=json.load(sys.stdin); print(d['user']['id'])")
-          
-          echo "PROJECT_ID=$PROJECT_ID" >> $GITHUB_ENV
-          echo "ORG_ID=$ORG_ID" >> $GITHUB_ENV
-          
-          mkdir -p .vercel
-          echo "{\"projectId\":\"$PROJECT_ID\",\"orgId\":\"$ORG_ID\"}" > .vercel/project.json
-          echo "Linked project: $PROJECT_ID"
-          
-          # Set env vars - first list existing to get IDs for deletion
-          EXISTING=$(curl -s "https://api.vercel.com/v9/projects/$PROJECT_ID/env" \
+            -d '{"name":"bee-doo-portal","framework":"nextjs"}' 2>/dev/null || \
+            curl -sf "https://api.vercel.com/v9/projects/bee-doo-portal" \
             -H "Authorization: Bearer $VERCEL_TOKEN")
           
-          # Delete old vars and set fresh ones
-          for KEY in NEXT_PUBLIC_SUPABASE_URL NEXT_PUBLIC_SUPABASE_ANON_KEY NEXT_PUBLIC_APP_URL SUPABASE_SERVICE_ROLE_KEY; do
-            ENV_ID=$(echo "$EXISTING" | python3 -c "
-import sys,json
-d=json.load(sys.stdin)
-envs=d.get('envs',[])
-for e in envs:
-    if e.get('key')=='$KEY':
-        print(e.get('id',''))
-        break
-" 2>/dev/null)
-            if [ -n "$ENV_ID" ]; then
-              curl -s -X DELETE "https://api.vercel.com/v9/projects/$PROJECT_ID/env/$ENV_ID" \
-                -H "Authorization: Bearer $VERCEL_TOKEN" > /dev/null
-            fi
+          PROJECT_ID=$(echo "$RESP" | grep -o '"id":"[^"]*"' | head -1 | cut -d'"' -f4)
+          ORG_ID=$(curl -sf "https://api.vercel.com/v2/user" \
+            -H "Authorization: Bearer $VERCEL_TOKEN" | grep -o '"id":"[^"]*"' | head -1 | cut -d'"' -f4)
+          
+          echo "Project: $PROJECT_ID, Org: $ORG_ID"
+          printf '{"projectId":"%s","orgId":"%s"}' "$PROJECT_ID" "$ORG_ID" > .vercel/project.json
+          cat .vercel/project.json
+
+      - name: Set Vercel env vars
+        run: |
+          PID=$(grep -o '"projectId":"[^"]*"' .vercel/project.json | cut -d'"' -f4)
+          
+          # Delete existing env vars
+          EXISTING=$(curl -sf "https://api.vercel.com/v9/projects/$PID/env" \
+            -H "Authorization: Bearer $VERCEL_TOKEN" | grep -o '"id":"[^"]*"' | cut -d'"' -f4)
+          for EID in $EXISTING; do
+            curl -sf -X DELETE "https://api.vercel.com/v9/projects/$PID/env/$EID" \
+              -H "Authorization: Bearer $VERCEL_TOKEN" > /dev/null 2>&1 || true
           done
           
-          # Add env vars
-          curl -s -X POST "https://api.vercel.com/v9/projects/$PROJECT_ID/env" \
-            -H "Authorization: Bearer $VERCEL_TOKEN" -H "Content-Type: application/json" \
+          # Add env vars as JSON array
+          curl -sf -X POST "https://api.vercel.com/v9/projects/$PID/env" \
+            -H "Authorization: Bearer $VERCEL_TOKEN" \
+            -H "Content-Type: application/json" \
             -d "[
-              {\"key\":\"NEXT_PUBLIC_SUPABASE_URL\",\"value\":\"https://hqzpemfaljxcysyqssng.supabase.co\",\"type\":\"plain\",\"target\":[\"production\",\"preview\"]},
-              {\"key\":\"NEXT_PUBLIC_SUPABASE_ANON_KEY\",\"value\":\"$ANON_KEY\",\"type\":\"plain\",\"target\":[\"production\",\"preview\"]},
-              {\"key\":\"NEXT_PUBLIC_APP_URL\",\"value\":\"https://bee-doo-portal.vercel.app\",\"type\":\"plain\",\"target\":[\"production\",\"preview\"]},
-              {\"key\":\"SUPABASE_SERVICE_ROLE_KEY\",\"value\":\"$SERVICE_KEY\",\"type\":\"encrypted\",\"target\":[\"production\",\"preview\"]}
-            ]" | python3 -c "import sys,json; d=json.load(sys.stdin); print('Env vars set:', len(d) if isinstance(d,list) else d.get('error','?'))"
+              {\"key\":\"NEXT_PUBLIC_SUPABASE_URL\",\"value\":\"$NEXT_PUBLIC_SUPABASE_URL\",\"type\":\"plain\",\"target\":[\"production\",\"preview\"]},
+              {\"key\":\"NEXT_PUBLIC_SUPABASE_ANON_KEY\",\"value\":\"$NEXT_PUBLIC_SUPABASE_ANON_KEY\",\"type\":\"plain\",\"target\":[\"production\",\"preview\"]},
+              {\"key\":\"NEXT_PUBLIC_APP_URL\",\"value\":\"$NEXT_PUBLIC_APP_URL\",\"type\":\"plain\",\"target\":[\"production\",\"preview\"]},
+              {\"key\":\"SUPABASE_SERVICE_ROLE_KEY\",\"value\":\"${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}\",\"type\":\"encrypted\",\"target\":[\"production\",\"preview\"]}
+            ]" > /dev/null
+          echo "Env vars set"
 
-      - name: Deploy to Vercel (remote build)
-        env:
-          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
-          VERCEL_ORG_ID: ${{ env.ORG_ID }}
-          VERCEL_PROJECT_ID: ${{ env.PROJECT_ID }}
+      - name: Deploy to Vercel
         run: |
-          DEPLOY_URL=$(vercel --prod --yes --token=$VERCEL_TOKEN)
-          echo "🚀 Deployed: $DEPLOY_URL"
-          echo "### Portal live: $DEPLOY_URL" >> $GITHUB_STEP_SUMMARY
+          URL=$(vercel --prod --yes --token=$VERCEL_TOKEN 2>&1 | tail -1)
+          echo "Deployed: $URL"
+          echo "### Portal: $URL" >> $GITHUB_STEP_SUMMARY
