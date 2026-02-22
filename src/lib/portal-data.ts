@@ -2,7 +2,7 @@
 // lib/portal-data.ts – Alle Datenbankabfragen für das Portal
 // Server-side only (createServerSupabase)
 // =============================================================
-import { createServerSupabase } from './supabase';
+import { createServerSupabase } from './supabase-server';
 import type { CustomerPortalView, Milestone, Document, MonitoringMonthly, Referral, Notification } from '@/types/database';
 
 // ─── Haupt-Snapshot (via View) ─────────────────────────────────
