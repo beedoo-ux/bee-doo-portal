@@ -1,3 +1,5 @@
-// Client-side only (browser) - import this in Client Components
+// Re-exports for convenience
+// Client Components: use createClient()
+// Server Components/Routes: use createServerSupabase()
 export { createClient } from './supabase-client';
-// For Server Components, import from './supabase-server'
+export { createServerSupabase } from './supabase-server';
