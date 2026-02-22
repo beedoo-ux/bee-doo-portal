@@ -5,14 +5,16 @@ on:
     branches: [main]
   workflow_dispatch:
 
+env:
+  VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+
 jobs:
   deploy:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
+      - uses: actions/setup-node@v4
         with:
           node-version: '20'
 
@@ -20,30 +22,13 @@ jobs:
         run: npm install -g vercel@latest
 
       - name: Deploy to Vercel
-        env:
-          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
         run: |
-          # Create project and deploy
-          vercel pull --yes --environment=production --token=$VERCEL_TOKEN || true
-          
-          # If no project exists yet, link/create it
-          if [ ! -f ".vercel/project.json" ]; then
-            vercel link --yes \
-              --project bee-doo-portal \
-              --token=$VERCEL_TOKEN || \
-            vercel --yes \
-              --name bee-doo-portal \
-              --token=$VERCEL_TOKEN
-          fi
-          
-          # Set environment variables
-          echo "$SUPABASE_URL" | vercel env add NEXT_PUBLIC_SUPABASE_URL production --token=$VERCEL_TOKEN --yes 2>/dev/null || true
-          echo "$SUPABASE_ANON" | vercel env add NEXT_PUBLIC_SUPABASE_ANON_KEY production --token=$VERCEL_TOKEN --yes 2>/dev/null || true
-          echo "$APP_URL" | vercel env add NEXT_PUBLIC_APP_URL production --token=$VERCEL_TOKEN --yes 2>/dev/null || true
-          
-          # Deploy to production
-          vercel deploy --prod --yes --token=$VERCEL_TOKEN
-        env:
-          SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
-          SUPABASE_ANON: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
-          APP_URL: https://portal.bee-doo.de
+          # Create/link project and deploy
+          vercel deploy --prod --yes \
+            --name bee-doo-portal \
+            --token=$VERCEL_TOKEN \
+            --build-env NEXT_PUBLIC_SUPABASE_URL=${{ secrets.NEXT_PUBLIC_SUPABASE_URL }} \
+            --build-env NEXT_PUBLIC_SUPABASE_ANON_KEY=${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }} \
+            --env NEXT_PUBLIC_SUPABASE_URL=${{ secrets.NEXT_PUBLIC_SUPABASE_URL }} \
+            --env NEXT_PUBLIC_SUPABASE_ANON_KEY=${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }} \
+            --env NEXT_PUBLIC_APP_URL=https://portal.bee-doo.de
