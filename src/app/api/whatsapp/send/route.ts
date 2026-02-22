@@ -4,6 +4,8 @@
 // Wird aufgerufen wenn sich ein Milestone-Status ändert
 // =============================================================
 import { NextRequest, NextResponse } from 'next/server';
+
+export const dynamic = 'force-dynamic';
 import { createServerSupabase } from '@/lib/supabase-server';
 
 const TWILIO_SID       = process.env.TWILIO_ACCOUNT_SID!;   // from env
