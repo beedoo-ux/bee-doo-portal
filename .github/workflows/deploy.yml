@@ -10,7 +10,6 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-
       - uses: actions/setup-node@v4
         with:
           node-version: '20'
@@ -18,13 +17,28 @@ jobs:
       - name: Install Vercel CLI
         run: npm install -g vercel@latest
 
-      - name: Validate Vercel token
-        run: |
-          curl -s "https://api.vercel.com/v2/user" \
-            -H "Authorization: Bearer ${{ secrets.VERCEL_TOKEN }}" | \
-            python3 -c "import sys,json; d=json.load(sys.stdin); print('User:', d.get('user',{}).get('username','?') or d.get('error',{}).get('message','invalid'))" 2>/dev/null
-
       - name: Deploy to Vercel
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
         run: |
-          vercel deploy --prod --yes --token="${{ secrets.VERCEL_TOKEN }}" 2>&1 | tee /tmp/out.txt
-          grep -E "https://.*\.vercel\.app" /tmp/out.txt | tail -1 || cat /tmp/out.txt | tail -20
+          # Link or create project named bee-doo-portal
+          vercel link --yes --project bee-doo-portal --token=$VERCEL_TOKEN || \
+          vercel link --yes --token=$VERCEL_TOKEN || true
+          
+          # Set env vars
+          vercel env add NEXT_PUBLIC_SUPABASE_URL production --token=$VERCEL_TOKEN <<< "${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}" 2>/dev/null || true
+          vercel env add NEXT_PUBLIC_SUPABASE_ANON_KEY production --token=$VERCEL_TOKEN <<< "${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}" 2>/dev/null || true
+          vercel env add TWILIO_ACCOUNT_SID production --token=$VERCEL_TOKEN <<< "${{ secrets.TWILIO_ACCOUNT_SID }}" 2>/dev/null || true
+          vercel env add TWILIO_AUTH_TOKEN production --token=$VERCEL_TOKEN <<< "${{ secrets.TWILIO_AUTH_TOKEN }}" 2>/dev/null || true
+          vercel env add TWILIO_WHATSAPP_FROM production --token=$VERCEL_TOKEN <<< "${{ secrets.TWILIO_WHATSAPP_FROM }}" 2>/dev/null || true
+          vercel env add NEXT_PUBLIC_APP_URL production --token=$VERCEL_TOKEN <<< "https://portal.bee-doo.de" 2>/dev/null || true
+          
+          # Deploy to production
+          echo "=== DEPLOYING ==="
+          DEPLOY_URL=$(vercel deploy --prod --yes --token=$VERCEL_TOKEN 2>&1)
+          echo "=== RESULT ==="
+          echo "$DEPLOY_URL"
+          echo "=== DONE ==="
+          
+          # Get project info
+          vercel ls --token=$VERCEL_TOKEN 2>&1 | head -10
