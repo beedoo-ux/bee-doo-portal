@@ -18,32 +18,13 @@ jobs:
       - name: Install Vercel CLI
         run: npm install -g vercel@latest
 
+      - name: Validate Vercel token
+        run: |
+          curl -s "https://api.vercel.com/v2/user" \
+            -H "Authorization: Bearer ${{ secrets.VERCEL_TOKEN }}" | \
+            python3 -c "import sys,json; d=json.load(sys.stdin); print('User:', d.get('user',{}).get('username','?') or d.get('error',{}).get('message','invalid'))" 2>/dev/null
+
       - name: Deploy to Vercel
         run: |
-          # Pull existing project config or create new
-          vercel pull --yes --environment=production --token=${{ secrets.VERCEL_TOKEN }} || true
-          
-          # Check if project.json was created
-          if [ ! -f ".vercel/project.json" ]; then
-            echo "Creating new Vercel project..."
-            # Create project via API
-            PROJECT=$(curl -s -X POST "https://api.vercel.com/v10/projects" \
-              -H "Authorization: Bearer ${{ secrets.VERCEL_TOKEN }}" \
-              -H "Content-Type: application/json" \
-              -d '{
-                "name": "bee-doo-portal",
-                "framework": "nextjs",
-                "gitRepository": {
-                  "type": "github",
-                  "repo": "beedoo-ux/bee-doo-portal"
-                },
-                "environmentVariables": [
-                  {"key": "NEXT_PUBLIC_SUPABASE_URL", "value": "${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}", "target": ["production","preview","development"]},
-                  {"key": "NEXT_PUBLIC_SUPABASE_ANON_KEY", "value": "${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}", "target": ["production","preview","development"]}
-                ]
-              }')
-            echo "Project created: $(echo $PROJECT | python3 -c 'import sys,json; d=json.load(sys.stdin); print(d.get(\"id\",d.get(\"error\",d))[:80])')"
-          fi
-          
-          # Deploy
-          vercel deploy --prod --yes --token=${{ secrets.VERCEL_TOKEN }} 2>&1
+          vercel deploy --prod --yes --token="${{ secrets.VERCEL_TOKEN }}" 2>&1 | tee /tmp/out.txt
+          grep -E "https://.*\.vercel\.app" /tmp/out.txt | tail -1 || cat /tmp/out.txt | tail -20

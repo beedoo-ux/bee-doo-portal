@@ -6,7 +6,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServerSupabase } from '@/lib/supabase';
 
-const TWILIO_SID       = process.env.TWILIO_ACCOUNT_SID!;   // AC7a13...
+const TWILIO_SID       = process.env.TWILIO_ACCOUNT_SID!;   // from env
 const TWILIO_AUTH      = process.env.TWILIO_AUTH_TOKEN!;     // d962c4...
 const TWILIO_WA_FROM   = process.env.TWILIO_WHATSAPP_FROM!; // whatsapp:+14155238886 (Twilio Sandbox) oder eure verifizierte Nummer
 
