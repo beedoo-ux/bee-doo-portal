@@ -2,7 +2,7 @@
 // app/portal/page.tsx – Server Component (Datenladen)
 // =============================================================
 import { redirect } from 'next/navigation';
-import { createServerSupabase } from '@/lib/supabase';
+import { createServerSupabase } from '@/lib/supabase-server';
 import {
   getPortalSnapshot,
   getMilestones,
