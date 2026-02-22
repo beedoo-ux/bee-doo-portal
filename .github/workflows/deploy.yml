@@ -10,9 +10,9 @@ jobs:
     runs-on: ubuntu-latest
     env:
       VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
-      NEXT_PUBLIC_SUPABASE_URL: https://hqzpemfaljxcysyqssng.supabase.co
-      NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
-      NEXT_PUBLIC_APP_URL: https://bee-doo-portal.vercel.app
+      SUPABASE_URL: https://hqzpemfaljxcysyqssng.supabase.co
+      SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
+      SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
     steps:
       - uses: actions/checkout@v4
 
@@ -28,48 +28,32 @@ jobs:
         run: |
           mkdir -p .vercel
           
-          # Try to create project (returns existing if name taken)
-          RESP=$(curl -sf -X POST "https://api.vercel.com/v9/projects" \
-            -H "Authorization: Bearer $VERCEL_TOKEN" \
-            -H "Content-Type: application/json" \
-            -d '{"name":"bee-doo-portal","framework":"nextjs"}' 2>/dev/null || \
-            curl -sf "https://api.vercel.com/v9/projects/bee-doo-portal" \
-            -H "Authorization: Bearer $VERCEL_TOKEN")
+          # Get or create project
+          RESP=$(curl -sf "https://api.vercel.com/v9/projects/bee-doo-portal" \
+            -H "Authorization: Bearer $VERCEL_TOKEN" 2>/dev/null)
+          
+          if [ -z "$RESP" ]; then
+            RESP=$(curl -sf -X POST "https://api.vercel.com/v9/projects" \
+              -H "Authorization: Bearer $VERCEL_TOKEN" \
+              -H "Content-Type: application/json" \
+              -d '{"name":"bee-doo-portal","framework":"nextjs"}')
+          fi
           
           PROJECT_ID=$(echo "$RESP" | grep -o '"id":"[^"]*"' | head -1 | cut -d'"' -f4)
           ORG_ID=$(curl -sf "https://api.vercel.com/v2/user" \
-            -H "Authorization: Bearer $VERCEL_TOKEN" | grep -o '"id":"[^"]*"' | head -1 | cut -d'"' -f4)
+            -H "Authorization: Bearer $VERCEL_TOKEN" | grep -o '"id":"user_[^"]*"' | cut -d'"' -f4)
           
           echo "Project: $PROJECT_ID, Org: $ORG_ID"
           printf '{"projectId":"%s","orgId":"%s"}' "$PROJECT_ID" "$ORG_ID" > .vercel/project.json
           cat .vercel/project.json
 
-      - name: Set Vercel env vars
-        run: |
-          PID=$(grep -o '"projectId":"[^"]*"' .vercel/project.json | cut -d'"' -f4)
-          
-          # Delete existing env vars
-          EXISTING=$(curl -sf "https://api.vercel.com/v9/projects/$PID/env" \
-            -H "Authorization: Bearer $VERCEL_TOKEN" | grep -o '"id":"[^"]*"' | cut -d'"' -f4)
-          for EID in $EXISTING; do
-            curl -sf -X DELETE "https://api.vercel.com/v9/projects/$PID/env/$EID" \
-              -H "Authorization: Bearer $VERCEL_TOKEN" > /dev/null 2>&1 || true
-          done
-          
-          # Add env vars as JSON array
-          curl -sf -X POST "https://api.vercel.com/v9/projects/$PID/env" \
-            -H "Authorization: Bearer $VERCEL_TOKEN" \
-            -H "Content-Type: application/json" \
-            -d "[
-              {\"key\":\"NEXT_PUBLIC_SUPABASE_URL\",\"value\":\"$NEXT_PUBLIC_SUPABASE_URL\",\"type\":\"plain\",\"target\":[\"production\",\"preview\"]},
-              {\"key\":\"NEXT_PUBLIC_SUPABASE_ANON_KEY\",\"value\":\"$NEXT_PUBLIC_SUPABASE_ANON_KEY\",\"type\":\"plain\",\"target\":[\"production\",\"preview\"]},
-              {\"key\":\"NEXT_PUBLIC_APP_URL\",\"value\":\"$NEXT_PUBLIC_APP_URL\",\"type\":\"plain\",\"target\":[\"production\",\"preview\"]},
-              {\"key\":\"SUPABASE_SERVICE_ROLE_KEY\",\"value\":\"${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}\",\"type\":\"encrypted\",\"target\":[\"production\",\"preview\"]}
-            ]" > /dev/null
-          echo "Env vars set"
-
       - name: Deploy to Vercel
         run: |
-          URL=$(vercel --prod --yes --token=$VERCEL_TOKEN 2>&1 | tail -1)
+          URL=$(vercel --prod --yes --token=$VERCEL_TOKEN \
+            --env NEXT_PUBLIC_SUPABASE_URL="$SUPABASE_URL" \
+            --env NEXT_PUBLIC_SUPABASE_ANON_KEY="$SUPABASE_ANON_KEY" \
+            --env NEXT_PUBLIC_APP_URL="https://bee-doo-portal.vercel.app" \
+            --env SUPABASE_SERVICE_ROLE_KEY="$SERVICE_ROLE_KEY" \
+            2>&1 | tail -1)
           echo "Deployed: $URL"
-          echo "### Portal: $URL" >> $GITHUB_STEP_SUMMARY
+          echo "### Portal live: $URL" >> $GITHUB_STEP_SUMMARY
