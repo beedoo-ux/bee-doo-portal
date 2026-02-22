@@ -19,78 +19,36 @@ jobs:
       - name: Install Vercel CLI
         run: npm install -g vercel@latest
 
-      - name: Create & Link Vercel Project
+      - name: Create Vercel project config
         run: |
-          # First check if project exists, if not create it
-          PROJECT=$(curl -s "https://api.vercel.com/v9/projects/bee-doo-portal" \
-            -H "Authorization: Bearer ${{ secrets.VERCEL_TOKEN }}")
-          
-          if echo "$PROJECT" | python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('id',''))" 2>/dev/null | grep -q "prj_"; then
-            PROJECT_ID=$(echo "$PROJECT" | python3 -c "import sys,json; print(json.load(sys.stdin)['id'])")
-            ORG_ID=$(echo "$PROJECT" | python3 -c "import sys,json; print(json.load(sys.stdin).get('accountId',''))")
-            echo "Existing project: $PROJECT_ID"
-          else
-            # Create new project
-            CREATE=$(curl -s -X POST "https://api.vercel.com/v9/projects" \
-              -H "Authorization: Bearer ${{ secrets.VERCEL_TOKEN }}" \
-              -H "Content-Type: application/json" \
-              -d '{"name":"bee-doo-portal","framework":"nextjs"}')
-            PROJECT_ID=$(echo "$CREATE" | python3 -c "import sys,json; print(json.load(sys.stdin)['id'])")
-            ORG_ID=$(echo "$CREATE" | python3 -c "import sys,json; print(json.load(sys.stdin).get('accountId',''))")
-            echo "Created project: $PROJECT_ID"
-          fi
-          
-          # Get user ID as org fallback
-          if [ -z "$ORG_ID" ] || [ "$ORG_ID" = "None" ]; then
-            ORG_ID=$(curl -s "https://api.vercel.com/v2/user" \
-              -H "Authorization: Bearer ${{ secrets.VERCEL_TOKEN }}" | python3 -c "import sys,json; print(json.load(sys.stdin)['user']['id'])")
-          fi
-          
-          echo "PROJECT_ID=$PROJECT_ID" >> $GITHUB_ENV
-          echo "ORG_ID=$ORG_ID" >> $GITHUB_ENV
-          
           mkdir -p .vercel
-          echo "{\"projectId\":\"$PROJECT_ID\",\"orgId\":\"$ORG_ID\"}" > .vercel/project.json
+          PROJECT=$(curl -s -X POST "https://api.vercel.com/v9/projects" \
+            -H "Authorization: Bearer ${{ secrets.VERCEL_TOKEN }}" \
+            -H "Content-Type: application/json" \
+            -d '{"name":"bee-doo-portal","framework":"nextjs"}')
+          echo "Response: $PROJECT"
+          PROJECT_ID=$(echo $PROJECT | python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('id',''))" 2>/dev/null)
+          if [ -z "$PROJECT_ID" ]; then
+            PROJECT_ID=$(curl -s "https://api.vercel.com/v9/projects/bee-doo-portal" \
+              -H "Authorization: Bearer ${{ secrets.VERCEL_TOKEN }}" | python3 -c "import sys,json; d=json.load(sys.stdin); print(d['id'])")
+          fi
+          ORG=$(curl -s "https://api.vercel.com/v2/user" \
+            -H "Authorization: Bearer ${{ secrets.VERCEL_TOKEN }}" | python3 -c "import sys,json; d=json.load(sys.stdin); print(d['user']['id'])")
+          echo "{\"projectId\":\"$PROJECT_ID\",\"orgId\":\"$ORG\"}" > .vercel/project.json
           cat .vercel/project.json
 
-      - name: Set Env Vars in Vercel
-        run: |
-          PID="${{ env.PROJECT_ID }}"
-          
-          upsert_env() {
-            local key=$1 val=$2
-            # Delete existing entries for this key
-            EXISTING=$(curl -s "https://api.vercel.com/v9/projects/$PID/env" \
-              -H "Authorization: Bearer ${{ secrets.VERCEL_TOKEN }}" | \
-              python3 -c "import sys,json; [print(e['id']) for e in json.load(sys.stdin).get('envs',[]) if e['key']=='$key']" 2>/dev/null)
-            for id in $EXISTING; do
-              curl -s -X DELETE "https://api.vercel.com/v9/projects/$PID/env/$id" \
-                -H "Authorization: Bearer ${{ secrets.VERCEL_TOKEN }}" > /dev/null
-            done
-            # Create new
-            curl -s -X POST "https://api.vercel.com/v9/projects/$PID/env" \
-              -H "Authorization: Bearer ${{ secrets.VERCEL_TOKEN }}" \
-              -H "Content-Type: application/json" \
-              -d "{\"key\":\"$key\",\"value\":\"$val\",\"type\":\"plain\",\"target\":[\"production\",\"preview\",\"development\"]}" > /dev/null
-            echo "Set $key ✓"
-          }
-          
-          upsert_env "NEXT_PUBLIC_SUPABASE_URL" "https://hqzpemfaljxcysyqssng.supabase.co"
-          upsert_env "NEXT_PUBLIC_SUPABASE_ANON_KEY" "${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}"
-          upsert_env "NEXT_PUBLIC_APP_URL" "https://bee-doo-portal.vercel.app"
-          upsert_env "SUPABASE_SERVICE_ROLE_KEY" "${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}"
+      - name: Install dependencies
+        run: npm install
 
       - name: Build
         env:
           NEXT_PUBLIC_SUPABASE_URL: https://hqzpemfaljxcysyqssng.supabase.co
           NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
           NEXT_PUBLIC_APP_URL: https://bee-doo-portal.vercel.app
-          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
         run: vercel build --prod --token=${{ secrets.VERCEL_TOKEN }}
 
       - name: Deploy
         run: |
-          URL=$(vercel deploy --prebuilt --prod --token=${{ secrets.VERCEL_TOKEN }})
-          echo "🚀 Portal live: $URL"
-          echo "### 🚀 Deployed!" >> $GITHUB_STEP_SUMMARY
-          echo "URL: $URL" >> $GITHUB_STEP_SUMMARY
+          DEPLOY_URL=$(vercel deploy --prebuilt --prod --token=${{ secrets.VERCEL_TOKEN }})
+          echo "Deployed: $DEPLOY_URL"
+          echo "### Deployed: $DEPLOY_URL" >> $GITHUB_STEP_SUMMARY
