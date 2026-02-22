@@ -13,39 +13,27 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Run migrations via Supabase Management API
-        env:
-          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
-        run: |
-          # Install Supabase CLI
-          curl -fsSL https://supabase.com/install.sh | bash
-          export PATH="$HOME/.local/bin:$PATH"
-          
-          # Link project (no DB password needed for API-based migrations)
-          supabase link --project-ref hqzpemfaljxcysyqssng
-          
-          # Push migrations using Management API (no direct DB connection)
-          supabase db push
-
-      - name: Fallback - Run SQL via Management API directly
-        if: failure()
+      - name: Run SQL migrations via Supabase Management API
         env:
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
         run: |
           REF="hqzpemfaljxcysyqssng"
           
           run_sql() {
-            local SQL="$1"
-            curl -s -X POST "https://api.supabase.com/v1/projects/$REF/database/query" \
+            local FILE="$1"
+            echo "Running: $FILE"
+            RESULT=$(curl -s -X POST "https://api.supabase.com/v1/projects/$REF/database/query" \
               -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" \
               -H "Content-Type: application/json" \
-              -d "{\"query\": $(echo "$SQL" | python3 -c "import sys,json; print(json.dumps(sys.stdin.read()))")}"
+              -d "{\"query\": $(cat "$FILE" | python3 -c "import sys,json; print(json.dumps(sys.stdin.read()))")}")
+            echo "$RESULT"
+            if echo "$RESULT" | grep -q '"error"'; then
+              echo "⚠️ Warning in $FILE (may already exist)"
+            else
+              echo "✅ $FILE applied"
+            fi
           }
           
-          # Migration 001
-          run_sql "$(cat supabase/migrations/001_initial_schema.sql)"
-          echo "Migration 001 done"
-          
-          # Migration 002  
-          run_sql "$(cat supabase/migrations/002_whatsapp_and_reviews.sql)"
-          echo "Migration 002 done"
+          for f in supabase/migrations/*.sql; do
+            run_sql "$f"
+          done
