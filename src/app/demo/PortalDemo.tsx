@@ -95,7 +95,7 @@ const FORECAST = [
 ];
 
 const REFERRALS = [
-  { name: 'Klaus Hoffmann',  status: 'abgeschlossen', bonus: '500 €', date: '12.01.2025' },
+  { name: 'Klaus Hoffmann',  status: 'abgeschlossen', bonus: '700 €', date: '12.01.2025' },
   { name: 'Sabine Kröger',   status: 'in Beratung',   bonus: '—',     date: '03.02.2025' },
 ];
 
@@ -327,7 +327,13 @@ function MonitoringTab() {
 
 function ReferralTab() {
   const [copied, setCopied] = useState(false);
-  const earned = REFERRALS.filter(r => r.status === 'abgeschlossen').reduce((s, r) => s + 500, 0);
+  const getPraemie = (n: number) => n <= 0 ? 0 : n === 1 ? 700 : n === 2 ? 800 : n === 3 ? 900 : 1000;
+  const getTotalPraemie = (s: number) => { let t = 0; for (let i = 1; i <= s; i++) t += getPraemie(i); return t; };
+
+  const sales = REFERRALS.filter(r => r.status === 'abgeschlossen').length;
+  const pending = REFERRALS.filter(r => r.status !== 'abgeschlossen').length;
+  const earned = getTotalPraemie(sales);
+  const nextPraemie = getPraemie(sales + 1);
 
   const copyLink = () => {
     navigator.clipboard.writeText(CUSTOMER.referral_link);
@@ -335,31 +341,206 @@ function ReferralTab() {
     setTimeout(() => setCopied(false), 2000);
   };
 
+  const coins = [
+    { betrag: 700, label: '1-UP', emoji: '🍄' },
+    { betrag: 800, label: 'STAR', emoji: '⭐' },
+    { betrag: 900, label: 'FIRE', emoji: '🔥' },
+    { betrag: 1000, label: '∞ GOLD', emoji: '👑' },
+  ];
+  const positions = [5, 18, 41, 63, 86];
+  const marioX = positions[Math.min(sales, 4)];
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
-      <Card style={{ background: `linear-gradient(135deg, ${DS.c1} 0%, rgba(253,225,84,0.08) 100%)`, border: `1px solid ${DS.yBd}` }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 16 }}>
-          <div>
-            <div style={{ fontSize: 22, marginBottom: 8 }}>🎁 Empfehlen & 500 € verdienen</div>
-            <p style={{ color: DS.dm, fontSize: 14, maxWidth: 480, margin: 0, lineHeight: 1.6 }}>
-              Empfehlen Sie bee-doo an Familie, Freunde oder Nachbarn. Pro erfolgreich installierter Anlage erhalten Sie und Ihr Empfehlungsnehmer je <strong style={{ color: DS.y }}>500 €</strong> Bonus.
-            </p>
+      <style>{`
+        @keyframes mJump {
+          0%,100% { transform: translateY(0) scaleX(-1); }
+          10% { transform: translateY(-3px) scaleX(-1); }
+          35% { transform: translateY(-36px) scaleX(-1); }
+          55% { transform: translateY(-30px) scaleX(-1); }
+          85% { transform: translateY(-2px) scaleX(-1); }
+        }
+        @keyframes mBounce {
+          0%,100% { transform: translateY(0) scaleX(-1); }
+          50% { transform: translateY(-8px) scaleX(-1); }
+        }
+        @keyframes cSpin {
+          0% { transform: rotateY(0deg) scale(1); }
+          50% { transform: rotateY(180deg) scale(1.08); }
+          100% { transform: rotateY(360deg) scale(1); }
+        }
+        @keyframes cGlow {
+          0%,100% { box-shadow: 0 0 6px rgba(253,225,84,0.3); }
+          50% { box-shadow: 0 0 22px rgba(253,225,84,0.7), 0 0 44px rgba(253,225,84,0.3); }
+        }
+        @keyframes spk {
+          0%,100% { opacity: 0; transform: scale(0) translateY(0); }
+          50% { opacity: 1; transform: scale(1) translateY(-12px); }
+        }
+        @keyframes gndMove {
+          from { background-position: 0 0; }
+          to { background-position: -48px 0; }
+        }
+        @keyframes cloudDrift {
+          0% { transform: translateX(0); }
+          100% { transform: translateX(-200px); }
+        }
+        @keyframes popUp {
+          0% { opacity: 0; transform: translateY(0) scale(0.5); }
+          30% { opacity: 1; transform: translateY(-22px) scale(1.15); }
+          100% { opacity: 0; transform: translateY(-40px) scale(0.7); }
+        }
+        .m-jump { animation: mJump 1.1s cubic-bezier(0.36,0,0.66,1) infinite; }
+        .m-idle { animation: mBounce 1.8s ease infinite; }
+        .c-spin { animation: cSpin 2.2s linear infinite; }
+        .c-glow { animation: cGlow 2s ease infinite; }
+        .c-sparkle { animation: spk 1.6s ease infinite; }
+        .score-pop { animation: popUp 2.2s ease-out forwards; }
+      `}</style>
+
+      {/* ── MARIO COIN COLLECTOR ── */}
+      <Card style={{ padding: 0, overflow: 'hidden', border: `2px solid ${DS.yBd}` }}>
+        <div style={{ borderRadius: 12, background: 'linear-gradient(180deg, #0b1428 0%, #101e35 50%, #0a1222 100%)' }}>
+          {/* Score Header */}
+          <div style={{ padding: '16px 20px 8px', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+            <div>
+              <div style={{ fontSize: 9, fontWeight: 800, color: 'rgba(255,255,255,0.25)', textTransform: 'uppercase', letterSpacing: 3 }}>🪙 × {sales} COINS</div>
+              <div style={{ fontSize: 38, fontWeight: 900, color: DS.y, fontFamily: "'DM Sans', monospace", textShadow: `0 0 20px rgba(253,225,84,0.35), 0 2px 0 #b8860b`, marginTop: 2 }}>
+                {earned.toLocaleString('de-DE')}€
+              </div>
+            </div>
+            <div style={{ textAlign: 'right' }}>
+              <div style={{ fontSize: 9, fontWeight: 800, color: 'rgba(255,255,255,0.25)', textTransform: 'uppercase', letterSpacing: 3 }}>WORLD</div>
+              <div style={{ fontSize: 28, fontWeight: 900, color: sales >= 4 ? DS.green : '#fff', fontFamily: "'DM Sans', monospace", textShadow: `0 0 12px ${sales >= 4 ? 'rgba(34,197,94,0.4)' : 'rgba(253,225,84,0.3)'}` }}>
+                {sales >= 4 ? '★-★' : `1-${Math.min(sales + 1, 4)}`}
+              </div>
+            </div>
           </div>
-          <div style={{ textAlign: 'right' }}>
-            <div style={{ color: DS.dm, fontSize: 12 }}>Bereits verdient</div>
-            <div style={{ color: DS.y, fontSize: 36, fontWeight: 700 }}>{earned} €</div>
-            <div style={{ color: DS.dm, fontSize: 12 }}>{REFERRALS.filter(r => r.status === 'abgeschlossen').length} Empfehlung(en)</div>
+
+          {/* Game World */}
+          <div style={{ position: 'relative', height: 160, margin: '0 8px', overflow: 'hidden' }}>
+            {/* Clouds */}
+            <div style={{ position: 'absolute', top: 4, left: '12%', fontSize: 18, opacity: 0.07, animation: 'cloudDrift 25s linear infinite' }}>☁️</div>
+            <div style={{ position: 'absolute', top: 14, left: '55%', fontSize: 13, opacity: 0.05, animation: 'cloudDrift 35s linear infinite 5s' }}>☁️</div>
+            <div style={{ position: 'absolute', top: 2, left: '80%', fontSize: 15, opacity: 0.06, animation: 'cloudDrift 30s linear infinite 12s' }}>☁️</div>
+
+            {/* Ground */}
+            <div style={{ position: 'absolute', bottom: 0, left: -4, right: -4, height: 22, overflow: 'hidden' }}>
+              <div style={{ position: 'absolute', inset: 0, background: 'repeating-linear-gradient(90deg, #2d1a00 0px, #3a2200 12px, #2d1a00 24px)', animation: 'gndMove 2.5s linear infinite' }} />
+              <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 4, background: 'linear-gradient(90deg, rgba(34,197,94,0.5), rgba(34,197,94,0.25), rgba(34,197,94,0.5))' }} />
+            </div>
+
+            {/* Track */}
+            <div style={{ position: 'absolute', bottom: 22, left: 36, right: 36, height: 4, borderRadius: 2 }}>
+              <div style={{ position: 'absolute', inset: 0, background: 'rgba(255,255,255,0.06)', borderRadius: 2 }} />
+              <div style={{ position: 'absolute', top: 0, left: 0, height: '100%', width: `${(Math.min(sales, 4) / 4) * 100}%`, background: `linear-gradient(90deg, ${DS.y}, ${DS.green})`, borderRadius: 2, transition: 'width 1.5s cubic-bezier(0.22,1,0.36,1)', boxShadow: `0 0 8px rgba(253,225,84,0.5)` }} />
+            </div>
+
+            {/* Mario */}
+            <div style={{ position: 'absolute', bottom: 26, left: `${marioX}%`, transition: 'left 1.2s cubic-bezier(0.22,1,0.36,1)', zIndex: 15, marginLeft: -16 }}>
+              <div className={sales > 0 ? 'm-jump' : 'm-idle'} style={{ fontSize: 32, lineHeight: 1, filter: 'drop-shadow(0 3px 6px rgba(0,0,0,0.6))' }}>
+                🏃
+              </div>
+              {sales > 0 && (
+                <div className="score-pop" style={{ position: 'absolute', top: -14, left: '50%', marginLeft: -20, width: 40, textAlign: 'center', fontSize: 14, fontWeight: 900, color: DS.y, textShadow: '0 1px 4px rgba(0,0,0,0.9)', pointerEvents: 'none', whiteSpace: 'nowrap' }}>
+                  +{getPraemie(sales)}€
+                </div>
+              )}
+            </div>
+
+            {/* Coins */}
+            <div style={{ position: 'absolute', bottom: 18, left: 10, right: 10, display: 'flex', justifyContent: 'space-around' }}>
+              {coins.map((c, i) => {
+                const collected = sales > i;
+                const current = sales === i;
+                return (
+                  <div key={i} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', width: 72, zIndex: 8, position: 'relative' }}>
+                    {collected && (
+                      <>
+                        <div className="c-sparkle" style={{ position: 'absolute', top: -10, left: 8, fontSize: 11 }}>✨</div>
+                        <div className="c-sparkle" style={{ position: 'absolute', top: -7, right: 10, fontSize: 9, animationDelay: '0.7s' }}>✨</div>
+                      </>
+                    )}
+                    <div className={current ? 'c-spin c-glow' : ''} style={{
+                      width: 52, height: 52, borderRadius: '50%',
+                      background: collected
+                        ? 'linear-gradient(145deg, #FFD700, #FF9F00, #FFD700)'
+                        : current
+                          ? `linear-gradient(145deg, rgba(253,225,84,0.45), rgba(253,225,84,0.18))`
+                          : 'rgba(255,255,255,0.04)',
+                      border: `3px solid ${collected ? '#FFD700' : current ? 'rgba(253,225,84,0.7)' : 'rgba(255,255,255,0.08)'}`,
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      boxShadow: collected
+                        ? '0 5px 22px rgba(255,215,0,0.5), inset 0 -4px 8px rgba(180,120,0,0.3), inset 0 4px 8px rgba(255,250,205,0.3)'
+                        : 'none',
+                      position: 'relative', transition: 'all 0.6s',
+                    }}>
+                      {collected
+                        ? <span style={{ fontSize: 26 }}>{c.emoji}</span>
+                        : current
+                          ? <span style={{ fontSize: 26 }}>❓</span>
+                          : <span style={{ fontSize: 24, opacity: 0.15, filter: 'grayscale(1)' }}>🪙</span>
+                      }
+                      {collected && (
+                        <div style={{ position: 'absolute', top: -6, right: -6, width: 20, height: 20, borderRadius: '50%', background: DS.green, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, fontWeight: 900, color: '#fff', border: '2px solid #0b1428', boxShadow: `0 2px 8px rgba(34,197,94,0.7)` }}>✓</div>
+                      )}
+                    </div>
+                    <div style={{ marginTop: 6, textAlign: 'center' }}>
+                      <div style={{ fontSize: 16, fontWeight: 900, color: collected ? DS.green : current ? DS.y : 'rgba(255,255,255,0.2)', textShadow: collected ? `0 0 6px rgba(34,197,94,0.3)` : 'none' }}>
+                        {c.betrag.toLocaleString('de-DE')}€
+                      </div>
+                      <div style={{ fontSize: 7, fontWeight: 800, color: collected ? 'rgba(34,197,94,0.6)' : current ? 'rgba(253,225,84,0.5)' : 'rgba(255,255,255,0.15)', textTransform: 'uppercase', letterSpacing: 1.5 }}>
+                        {c.label}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Bottom: Next + Pipeline */}
+          <div style={{ padding: '10px 16px 14px', display: 'flex', gap: 10, borderTop: '1px solid rgba(255,255,255,0.06)' }}>
+            <div style={{ flex: 1, padding: '10px 14px', borderRadius: 10, background: 'rgba(253,225,84,0.06)', border: '1px solid rgba(253,225,84,0.12)' }}>
+              <div style={{ fontSize: 8, fontWeight: 800, color: 'rgba(255,255,255,0.25)', textTransform: 'uppercase', letterSpacing: 2, marginBottom: 3 }}>
+                {sales >= 4 ? '🔥 MAX LEVEL' : '❓ NÄCHSTE MÜNZE'}
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+                <span style={{ fontSize: 18 }}>{sales >= 4 ? '👑' : '🪙'}</span>
+                <span style={{ fontSize: 22, fontWeight: 900, color: DS.y }}>{nextPraemie.toLocaleString('de-DE')}€</span>
+              </div>
+              {sales >= 4
+                ? <div style={{ fontSize: 11, color: DS.green, marginTop: 1, fontWeight: 700 }}>Jeder Sale = 1.000€! 🔥</div>
+                : <div style={{ fontSize: 11, color: DS.dm, marginTop: 1 }}>Empfehlung #{sales + 1} bringt&apos;s!</div>
+              }
+            </div>
+            <div style={{ flex: 1, padding: '10px 14px', borderRadius: 10, background: 'rgba(34,197,94,0.06)', border: '1px solid rgba(34,197,94,0.12)' }}>
+              <div style={{ fontSize: 8, fontWeight: 800, color: 'rgba(255,255,255,0.25)', textTransform: 'uppercase', letterSpacing: 2, marginBottom: 3 }}>💎 IN DER PIPELINE</div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+                <span style={{ fontSize: 18 }}>💎</span>
+                <span style={{ fontSize: 22, fontWeight: 900, color: DS.green }}>{pending}</span>
+                <span style={{ fontSize: 12, color: DS.dm }}>Leads</span>
+              </div>
+              {pending > 0
+                ? <div style={{ fontSize: 11, color: DS.green, marginTop: 1, fontWeight: 600 }}>= bis zu {(() => { let s = 0; for (let i = 1; i <= pending; i++) s += getPraemie(sales + i); return s.toLocaleString('de-DE'); })()}€ 💰</div>
+                : <div style={{ fontSize: 11, color: DS.dm, marginTop: 1 }}>Teilen Sie Ihren Link!</div>
+              }
+            </div>
           </div>
         </div>
+      </Card>
 
-        <div style={{ marginTop: 20, display: 'flex', gap: 12, flexWrap: 'wrap' }}>
-          <div style={{ flex: 1, minWidth: 240 }}>
+      {/* ── LINK TEILEN ── */}
+      <Card>
+        <SectionTitle>Ihren Link teilen</SectionTitle>
+        <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
+          <div style={{ flex: 1, minWidth: 220 }}>
             <div style={{ color: DS.dm, fontSize: 12, marginBottom: 6 }}>Ihr persönlicher Empfehlungslink</div>
             <div style={{ display: 'flex', gap: 8 }}>
               <div style={{ flex: 1, background: DS.c2, border: `1px solid ${DS.bd}`, borderRadius: 8, padding: '10px 14px', fontSize: 13, color: DS.tx, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                 {CUSTOMER.referral_link}
               </div>
-              <button onClick={copyLink} style={{ background: DS.y, color: DS.bg, border: 'none', borderRadius: 8, padding: '10px 16px', cursor: 'pointer', fontWeight: 700, fontSize: 13, whiteSpace: 'nowrap' }}>
+              <button onClick={copyLink} style={{ background: DS.y, color: DS.bg, border: 'none', borderRadius: 8, padding: '10px 16px', cursor: 'pointer', fontWeight: 700, fontSize: 13, whiteSpace: 'nowrap', fontFamily: DS.font }}>
                 {copied ? '✓ Kopiert!' : 'Kopieren'}
               </button>
             </div>
@@ -371,37 +552,50 @@ function ReferralTab() {
             </div>
           </div>
         </div>
+        <div style={{ display: 'flex', gap: 10, marginTop: 14 }}>
+          <button onClick={() => { const t = `Hallo! Ich habe meine Solaranlage mit bee-doo installiert und bin begeistert! ☀️\n\nWenn du auch Interesse hast:\n${CUSTOMER.referral_link}\n\nFür jeden Abschluss gibt's Prämien! 🪙`; window.open(`https://wa.me/?text=${encodeURIComponent(t)}`); }} style={{ flex: 1, padding: '12px 16px', borderRadius: 10, background: '#25D366', color: '#fff', border: 'none', fontSize: 14, fontWeight: 700, cursor: 'pointer', fontFamily: DS.font }}>
+            💬 Per WhatsApp teilen
+          </button>
+          <button onClick={() => { window.location.href = `mailto:?subject=bee-doo Solar – Empfehlung&body=${encodeURIComponent(`Hallo,\n\nich kann bee-doo Solar wirklich empfehlen!\n\nHier kannst du ein kostenloses Angebot anfragen:\n${CUSTOMER.referral_link}\n\nViele Grüße`)}`; }} style={{ flex: 1, padding: '12px 16px', borderRadius: 10, background: DS.c2, color: DS.tx, border: `1px solid ${DS.bd}`, fontSize: 14, fontWeight: 700, cursor: 'pointer', fontFamily: DS.font }}>
+            ✉️ Per E-Mail teilen
+          </button>
+        </div>
       </Card>
 
+      {/* ── MEINE EMPFEHLUNGEN ── */}
       <Card>
         <SectionTitle>Meine Empfehlungen</SectionTitle>
         {REFERRALS.length === 0 ? (
-          <p style={{ color: DS.dm, textAlign: 'center', padding: 24 }}>Noch keine Empfehlungen — werden Sie der Erste!</p>
+          <p style={{ color: DS.dm, textAlign: 'center', padding: 24 }}>Noch keine Empfehlungen — teilen Sie Ihren Link!</p>
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-            {REFERRALS.map((r, i) => (
-              <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 16px', background: DS.c2, borderRadius: 8, border: `1px solid ${DS.bd}` }}>
-                <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
-                  <div style={{ width: 36, height: 36, borderRadius: '50%', background: DS.yDim, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16 }}>
-                    {r.name[0]}
+            {REFERRALS.map((r, i) => {
+              const isSale = r.status === 'abgeschlossen';
+              const saleNr = REFERRALS.filter((x, j) => j <= i && x.status === 'abgeschlossen').length;
+              return (
+                <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '14px 16px', background: DS.c2, borderRadius: 10, border: `1px solid ${isSale ? 'rgba(34,197,94,0.2)' : DS.bd}` }}>
+                  <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
+                    <div style={{ width: 40, height: 40, borderRadius: '50%', background: isSale ? 'linear-gradient(145deg, #FFD700, #FF9F00)' : DS.yDim, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: isSale ? 20 : 16, boxShadow: isSale ? '0 3px 12px rgba(255,215,0,0.3)' : 'none' }}>
+                      {isSale ? coins[Math.min(saleNr - 1, 3)].emoji : r.name[0]}
+                    </div>
+                    <div>
+                      <div style={{ color: DS.tx, fontWeight: 600, fontSize: 14 }}>{r.name}</div>
+                      <div style={{ color: DS.dm, fontSize: 12 }}>Empfohlen am {r.date}</div>
+                    </div>
                   </div>
-                  <div>
-                    <div style={{ color: DS.tx, fontWeight: 500 }}>{r.name}</div>
-                    <div style={{ color: DS.dm, fontSize: 12 }}>Empfohlen am {r.date}</div>
+                  <div style={{ textAlign: 'right' }}>
+                    <span style={{
+                      background: isSale ? DS.greenDim : DS.blueDim,
+                      color: isSale ? DS.green : DS.blue,
+                      padding: '4px 12px', borderRadius: 10, fontSize: 12, fontWeight: 600,
+                    }}>
+                      {isSale ? '✓ Sale' : '◌ In Beratung'}
+                    </span>
+                    {isSale && <div style={{ color: DS.green, fontWeight: 800, fontSize: 16, marginTop: 4 }}>{getPraemie(saleNr).toLocaleString('de-DE')}€</div>}
                   </div>
                 </div>
-                <div style={{ textAlign: 'right' }}>
-                  <span style={{
-                    background: r.status === 'abgeschlossen' ? DS.greenDim : DS.blueDim,
-                    color: r.status === 'abgeschlossen' ? DS.green : DS.blue,
-                    padding: '3px 10px', borderRadius: 10, fontSize: 12,
-                  }}>
-                    {r.status === 'abgeschlossen' ? '✓ Abgeschlossen' : '◌ In Beratung'}
-                  </span>
-                  {r.bonus !== '—' && <div style={{ color: DS.y, fontWeight: 700, fontSize: 15, marginTop: 4 }}>{r.bonus}</div>}
-                </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </Card>
@@ -606,3 +800,4 @@ export default function PortalDemo() {
     </>
   );
 }
+
