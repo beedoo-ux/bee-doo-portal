@@ -170,33 +170,48 @@ function StatusTab() {
           <div style={{ background: DS.y, height: '100%', borderRadius: 4, width: `${pct}%`, transition: 'width 0.6s ease' }} />
         </div>
 
-        {/* Timeline */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
-          {MILESTONES.map((m, i) => (
-            <div key={m.id} style={{ display: 'flex', gap: 16, position: 'relative' }}>
-              {/* Line */}
-              {i < MILESTONES.length - 1 && (
-                <div style={{ position: 'absolute', left: 19, top: 40, width: 2, height: 'calc(100% - 8px)', background: m.done ? DS.y : DS.bd }} />
-              )}
-              {/* Icon */}
-              <div style={{
-                width: 40, height: 40, borderRadius: '50%', flexShrink: 0,
-                background: m.done ? DS.yDim : (m.active ? DS.blueDim : DS.c2),
-                border: `2px solid ${m.done ? DS.y : (m.active ? DS.blue : DS.bd)}`,
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                fontSize: 18, zIndex: 1,
+        {/* Milestones – Modern Cards */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+          {MILESTONES.map((m, i) => {
+            const isLast = i === MILESTONES.length - 1;
+            return (
+              <div key={m.id} style={{
+                display: 'flex', alignItems: 'center', gap: 14, padding: '14px 16px',
+                borderRadius: 12,
+                background: m.active ? `${DS.blue}12` : m.done ? DS.c2 : 'transparent',
+                border: `1.5px solid ${m.active ? `${DS.blue}40` : m.done ? DS.bd : `${DS.bd}60`}`,
+                transition: 'all 0.3s',
               }}>
-                {m.done ? '✓' : m.icon}
-              </div>
-              <div style={{ padding: '8px 0 20px' }}>
-                <div style={{ fontWeight: m.active ? 700 : 500, color: m.done ? DS.y : (m.active ? DS.blue : DS.tx), fontSize: 14 }}>
-                  {m.label}
-                  {m.active && <span style={{ marginLeft: 8, background: DS.blueDim, color: DS.blue, padding: '2px 8px', borderRadius: 10, fontSize: 11 }}>Aktuell</span>}
+                {/* Step Number / Check */}
+                <div style={{
+                  width: 38, height: 38, borderRadius: 10, flexShrink: 0,
+                  background: m.done ? `${DS.y}15` : m.active ? `${DS.blue}15` : `${DS.bd}40`,
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  fontSize: m.done ? 16 : 14,
+                  fontWeight: 800,
+                  color: m.done ? DS.y : m.active ? DS.blue : DS.dm,
+                }}>
+                  {m.done ? '✓' : m.icon}
                 </div>
-                <div style={{ color: DS.dm, fontSize: 12, marginTop: 2 }}>{m.date}</div>
+                {/* Content */}
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <span style={{ fontSize: 14, fontWeight: m.active ? 700 : m.done ? 600 : 500, color: m.done ? DS.tx : m.active ? DS.blue : DS.dm }}>
+                      {m.label}
+                    </span>
+                    {m.active && <span style={{ background: `${DS.blue}20`, color: DS.blue, padding: '2px 8px', borderRadius: 6, fontSize: 10, fontWeight: 700, letterSpacing: 0.5 }}>AKTUELL</span>}
+                  </div>
+                  <div style={{ fontSize: 12, color: DS.dm, marginTop: 2 }}>{m.date}</div>
+                </div>
+                {/* Status indicator */}
+                <div style={{
+                  width: 8, height: 8, borderRadius: '50%', flexShrink: 0,
+                  background: m.done ? DS.green : m.active ? DS.blue : `${DS.dm}40`,
+                  boxShadow: m.active ? `0 0 8px ${DS.blue}60` : m.done ? `0 0 6px ${DS.green}40` : 'none',
+                }} />
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       </Card>
 
@@ -800,4 +815,5 @@ export default function PortalDemo() {
     </>
   );
 }
+
 
