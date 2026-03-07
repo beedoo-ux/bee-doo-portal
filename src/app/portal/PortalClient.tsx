@@ -1,7 +1,7 @@
 'use client';
 // =============================================================
 // app/portal/PortalClient.tsx – bee-doo Design System
-// Font: DM Sans | BG: #0c1222 | Akzent: #FDE154
+// Font: DM Sans | BG: #0a0a0a | Akzent: #F5C500
 // =============================================================
 import { useState, useEffect, useTransition } from 'react';
 import { format } from 'date-fns';
@@ -15,15 +15,15 @@ import type { CustomerPortalView, Milestone, Document, MonitoringMonthly, Referr
 
 // ─── bee-doo Design System ────────────────────────────────────
 const DS = {
-  bg:      '#0c1222',
-  c1:      '#151d30',
-  c2:      '#1c2640',
-  bd:      '#263354',
-  tx:      '#e1e7ef',
-  dm:      '#5c6b8a',
-  y:       '#FDE154',
-  yDim:    'rgba(253,225,84,0.10)',
-  yBd:     'rgba(253,225,84,0.22)',
+  bg:      '#0a0a0a',
+  c1:      '#141414',
+  c2:      '#1a1a1a',
+  bd:      'rgba(255,255,255,0.06)',
+  tx:      'rgba(255,255,255,0.9)',
+  dm:      'rgba(255,255,255,0.45)',
+  y:       '#F5C500',
+  yDim:    'rgba(245,197,0,0.10)',
+  yBd:     'rgba(245,197,0,0.22)',
   green:   '#22c55e',
   greenDim:'rgba(34,197,94,0.10)',
   blue:    '#3b82f6',
