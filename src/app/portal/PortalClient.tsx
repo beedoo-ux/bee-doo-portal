@@ -1,9 +1,10 @@
 'use client';
 // =============================================================
-// app/portal/PortalClient.tsx – bee-doo Design System
-// Font: DM Sans | BG: #0a0a0a | Akzent: #F5C500
+// app/portal/PortalClient.tsx – bee-doo Kundenportal v2
+// Enpal-Style: TopNav + Journey-Bar + Sidebar
+// Dark Theme: DM Sans | #0a0a0a | #F5C500
 // =============================================================
-import { useState, useEffect, useTransition } from 'react';
+import { useState, useEffect } from 'react';
 import { format } from 'date-fns';
 import { de } from 'date-fns/locale';
 import {
@@ -13,212 +14,369 @@ import {
 import { createClient } from '@/lib/supabase';
 import type { CustomerPortalView, Milestone, Document, MonitoringMonthly, Referral } from '@/types/database';
 
-// ─── bee-doo Design System ────────────────────────────────────
+// ─── Design System ────────────────────────────────────────────
 const DS = {
-  bg:      '#0a0a0a',
-  c1:      '#141414',
-  c2:      '#1a1a1a',
-  bd:      'rgba(255,255,255,0.06)',
-  tx:      'rgba(255,255,255,0.9)',
-  dm:      'rgba(255,255,255,0.45)',
-  y:       '#F5C500',
-  yDim:    'rgba(245,197,0,0.10)',
-  yBd:     'rgba(245,197,0,0.22)',
-  green:   '#22c55e',
-  greenDim:'rgba(34,197,94,0.10)',
-  blue:    '#3b82f6',
-  blueDim: 'rgba(59,130,246,0.10)',
-  font:    "'DM Sans', system-ui, sans-serif",
+  bg:       '#0a0a0a',
+  c1:       '#141414',
+  c2:       '#1c1c1c',
+  c3:       '#242424',
+  bd:       'rgba(255,255,255,0.07)',
+  bdHov:    'rgba(245,197,0,0.28)',
+  tx:       'rgba(255,255,255,0.92)',
+  dm:       'rgba(255,255,255,0.42)',
+  y:        '#F5C500',
+  yDim:     'rgba(245,197,0,0.09)',
+  yBd:      'rgba(245,197,0,0.20)',
+  green:    '#22c55e',
+  greenDim: 'rgba(34,197,94,0.10)',
+  blue:     '#3b82f6',
+  blueDim:  'rgba(59,130,246,0.10)',
+  font:     "'DM Sans', system-ui, sans-serif",
+  radius:   16,
 };
 
-const TABS = [
-  { id: 'status',     icon: '📋', label: 'Projektstatus'      },
-  { id: 'dokumente',  icon: '📄', label: 'Dokumente'           },
-  { id: 'monitoring', icon: '⚡', label: 'Monitoring'          },
-  { id: 'bewertungen',icon: '⭐', label: 'Bewertungen'         },
-  { id: 'referral',   icon: '🎁', label: 'Empfehlen & Sparen'  },
-] as const;
-type TabId = typeof TABS[number]['id'];
+type TabId = 'uebersicht' | 'system' | 'einsparpotential' | 'informationen' | 'dokumente';
 
-interface TrustpilotReview {
-  id: string; stars: number; title: string | null; text: string;
-  author_name: string; author_location: string | null;
-  created_at_tp: string; response: string | null;
-}
+const TABS: { id: TabId; icon: string; label: string }[] = [
+  { id: 'uebersicht',       icon: '⊞',  label: 'Übersicht'       },
+  { id: 'system',           icon: '🏠',  label: 'Ihr System'      },
+  { id: 'einsparpotential', icon: '€',   label: 'Einsparpotential'},
+  { id: 'informationen',    icon: '📰',  label: 'Informationen'   },
+  { id: 'dokumente',        icon: '📄',  label: 'Dokumente'       },
+];
+
+const JOURNEY_STEPS = [
+  { label: 'Erstgespräch',  sub: 'Beratungs-\ngespräch'    },
+  { label: 'Vor-Ort',       sub: 'Vor-Ort\nTermin'         },
+  { label: 'Angebot',       sub: 'Finales\nAngebotsgespräch'},
+  { label: 'Installation',  sub: 'Montage'                  },
+];
+
+const SYSTEM_COMPONENTS = [
+  { icon: '☀️',  name: 'Solarmodule',     desc: 'Maximale Leistung für Ihre Energieversorgung.'     },
+  { icon: '🔋',  name: 'Stromspeicher',   desc: 'Nutzen Sie Ihre Energie jederzeit optimal.'         },
+  { icon: '⚡',  name: 'Wallbox',          desc: 'Laden Sie Ihr Auto mit Sonnenstrom.'                },
+  { icon: '🌡️', name: 'Wärmepumpe',      desc: 'Hocheffizient und zukunftsfähig für Ihr Zuhause.'  },
+  { icon: '📱',  name: 'bee-doo App',     desc: 'Ihr Energiemanager – alles im Blick.'               },
+  { icon: '🛡️', name: 'Vollkasko-Schutz',desc: 'Bleiben Sie unabhängig, auch bei Störungen.'        },
+];
+
+const ARTIKEL = [
+  { icon: '🌞', title: 'Solaranlage 2025: Was lohnt sich?',     sub: 'Förderungen & Amortisation'    },
+  { icon: '⚡', title: 'Stromspeicher im Vergleich',              sub: 'Welcher Speicher passt zu mir' },
+  { icon: '🏠', title: 'Zuhause bei unseren Kunden',             sub: 'Erfahrungsberichte aus NRW'   },
+  { icon: '🚗', title: 'Wallbox: Günstig laden',                  sub: 'Tipps für E-Auto-Besitzer'    },
+  { icon: '🌍', title: 'CO₂-Einsparung berechnen',               sub: 'Klimaschutz konkret'           },
+  { icon: '💰', title: 'Einspeisung & Direktvermarktung',        sub: 'So verdienen Sie mit Solar'   },
+];
+
+const FAQ_ITEMS = [
+  'Welche Unterlagen benötige ich für das Gespräch?',
+  'Wie lange dauert das Gespräch?',
+  'Kann ich meinen Termin verschieben?',
+];
 
 interface Props {
-  snapshot: CustomerPortalView; milestones: Milestone[];
-  documents: Document[]; monitoring: MonitoringMonthly[]; referrals: Referral[];
+  snapshot: CustomerPortalView;
+  milestones: Milestone[];
+  documents: Document[];
+  monitoring: MonitoringMonthly[];
+  referrals: Referral[];
+  notifications?: any[];
 }
 
 const fmt  = (n: number) => n.toLocaleString('de-DE', { maximumFractionDigits: 0 });
-const fmtD = (d: string | null) => d ? format(new Date(d), 'd. MMM yyyy', { locale: de }) : '–';
+const fmtD = (d: string | null) => d ? format(new Date(d), 'd. MMMM yyyy', { locale: de }) : '–';
+const fmtT = (d: string | null) => d ? format(new Date(d), 'HH:mm', { locale: de }) : '';
+const fmtShort = (d: string | null) => d ? format(new Date(d), 'd. MMM', { locale: de }) : '';
+const fmtDay   = (d: string | null) => d ? format(new Date(d), 'EEEE', { locale: de }) : '';
 
+// ─── Sub-Components ───────────────────────────────────────────
 const Card = ({ children, style }: { children: React.ReactNode; style?: React.CSSProperties }) => (
-  <div style={{ background: DS.c1, border: `1px solid ${DS.bd}`, borderRadius: 12, padding: 24, ...style }}>{children}</div>
+  <div style={{ background: DS.c1, border: `1px solid ${DS.bd}`, borderRadius: DS.radius, padding: 22, ...style }}>
+    {children}
+  </div>
 );
-const Label = ({ children }: { children: React.ReactNode }) => (
+const SectionLabel = ({ children }: { children: React.ReactNode }) => (
   <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: '1.4px', textTransform: 'uppercase', color: DS.dm, marginBottom: 14 }}>{children}</div>
 );
-const Stars = ({ n, size = 15 }: { n: number; size?: number }) => (
-  <div style={{ display: 'flex', gap: 1 }}>
-    {[1,2,3,4,5].map(i => <span key={i} style={{ fontSize: size, color: i <= n ? DS.y : DS.bd }}>★</span>)}
-  </div>
+const Stars = ({ n, size = 14 }: { n: number; size?: number }) => (
+  <span style={{ color: DS.y, fontSize: size }}>{Array.from({length:5}, (_,i) => i < n ? '★' : '☆').join('')}</span>
 );
 const ChartTip = ({ active, payload, label }: any) => {
   if (!active || !payload?.length) return null;
   return (
-    <div style={{ background: DS.c2, border: `1px solid ${DS.bd}`, borderRadius: 8, padding: '8px 14px', fontSize: 13, fontFamily: DS.font }}>
+    <div style={{ background: DS.c2, border: `1px solid ${DS.bd}`, borderRadius: 8, padding: '8px 14px', fontSize: 12, fontFamily: DS.font }}>
       <div style={{ color: DS.dm, marginBottom: 4 }}>{label}</div>
-      {payload.map((p: any) => <div key={p.name} style={{ color: p.color, fontWeight: 600 }}>{fmt(p.value)} {p.name === 'production_kwh' ? 'kWh' : 'kg CO₂'}</div>)}
+      {payload.map((p: any) => (
+        <div key={p.name} style={{ color: p.color || DS.y, fontWeight: 700 }}>{fmt(p.value)} {p.name === 'production_kwh' ? 'kWh' : p.name === 'co2_saved_kg' ? 'kg CO₂' : '€'}</div>
+      ))}
     </div>
   );
 };
 
-// =============================================================
-export default function PortalClient({ snapshot, milestones, documents, monitoring, referrals }: Props) {
-  const [tab, setTab]           = useState<TabId>('status');
-  const [npsScore, setNpsScore] = useState<number | null>(null);
-  const [npsNote, setNpsNote]   = useState('');
-  const [npsSent, setNpsSent]   = useState(false);
-  const [copied, setCopied]     = useState(false);
-  const [reviews, setReviews]   = useState<TrustpilotReview[]>([]);
-  const [revLoading, setRL]     = useState(false);
-  const [revSource, setRS]      = useState('');
-  const [, startTransition]     = useTransition();
-  const supabase = createClient();
+// ─── Lock Overlay ─────────────────────────────────────────────
+const LockedOverlay = ({ text }: { text: string }) => (
+  <div style={{ position: 'absolute', inset: 0, borderRadius: DS.radius, backdropFilter: 'blur(6px)', background: 'rgba(10,10,10,0.55)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 10, zIndex: 2 }}>
+    <span style={{ fontSize: 28 }}>🔒</span>
+    <div style={{ fontSize: 13, fontWeight: 600, color: DS.tx }}>{text}</div>
+  </div>
+);
 
-  const { first_name, referral_code, total_kwh, total_co2_kg, total_revenue_eur, referral_count, referral_bonus_total } = snapshot;
-  const doneCount   = milestones.filter(m => m.status === 'done').length;
-  const activeMs    = milestones.find(m => m.status === 'active');
-  const progressPct = Math.round((doneCount / Math.max(milestones.length, 1)) * 100);
-  const chartData   = monitoring.map(m => ({
+// ─── MAIN COMPONENT ───────────────────────────────────────────
+export default function PortalClient({ snapshot, milestones, documents, monitoring, referrals }: Props) {
+  const [tab, setTab] = useState<TabId>('uebersicht');
+  const [faqOpen, setFaqOpen] = useState<number | null>(null);
+  const [uploadModal, setUploadModal] = useState<'closed' | 'intro' | 'guide' | 'upload'>('closed');
+  const [copied, setCopied] = useState(false);
+  const [npsScore, setNpsScore] = useState<number | null>(null);
+  const [npsNote, setNpsNote] = useState('');
+  const [npsSent, setNpsSent] = useState(false);
+
+  // Daten aus Snapshot
+  const vorname    = snapshot.first_name ?? 'Kunde';
+  const nachname   = snapshot.last_name  ?? '';
+  const fullName   = `${vorname} ${nachname}`.trim();
+  const initials   = `${(snapshot.first_name?.[0]??'').toUpperCase()}${(snapshot.last_name?.[0]??'').toUpperCase()}`;
+  const adresse    = snapshot.address    ?? '';
+  const plz        = snapshot.postal_code ?? '';
+  const ort        = snapshot.city       ?? 'Bielefeld';
+  const berater    = snapshot.sales_rep_name ?? 'Ihr Berater';
+  const termin_at  = snapshot.next_appointment_at as string | null ?? null;
+  const milestone_current = snapshot.current_milestone ?? 0;
+  const referral_code     = snapshot.referral_code ?? 'BD-XXXX';
+  const referral_count    = referrals.length;
+  const referral_bonus    = referral_count * 250;
+
+  // Karte — Satellitenbild URL (Google Maps Static)
+  const mapCenter = encodeURIComponent(`${adresse}, ${plz} ${ort}`);
+  const mapUrl    = `https://maps.googleapis.com/maps/api/staticmap?center=${mapCenter}&zoom=18&size=600x300&maptype=satellite&key=AIzaSyCra7fsO1X6iTszhOCI_x2eyG-3IQqlLno`;
+
+  // Monitoring-Aggregat
+  const total_kwh = monitoring.reduce((s, m) => s + (m.production_kwh ?? 0), 0);
+  const total_co2 = monitoring.reduce((s, m) => s + (m.co2_saved_kg   ?? 0), 0);
+  const total_eur = monitoring.reduce((s, m) => s + (m.revenue_eur    ?? 0), 0);
+  const chartData = monitoring.slice(-12).map(m => ({
     label: format(new Date(m.month), 'MMM yy', { locale: de }),
-    production_kwh: m.production_kwh, co2_saved_kg: m.co2_saved_kg,
+    production_kwh: m.production_kwh ?? 0,
+    co2_saved_kg:   m.co2_saved_kg   ?? 0,
+    revenue_eur:    m.revenue_eur    ?? 0,
   }));
 
-  useEffect(() => {
-    if (tab !== 'bewertungen' || reviews.length) return;
-    setRL(true);
-    fetch('/api/trustpilot?minStars=4&limit=6')
-      .then(r => r.json()).then(d => { setReviews(d.reviews ?? []); setRS(d.source); })
-      .catch(() => {}).finally(() => setRL(false));
-  }, [tab]);
+  // Milestone-Status
+  const journeyStep = Math.min(milestone_current, 3);
+  const isAfterBeratung = milestone_current >= 1;
 
-  const handleLogout = () => startTransition(async () => { await supabase.auth.signOut(); window.location.href = '/login'; });
+  const handleCopy = () => {
+    navigator.clipboard.writeText(referral_code).then(() => { setCopied(true); setTimeout(() => setCopied(false), 2000); });
+  };
+
   const handleNps = async () => {
     if (npsScore === null) return;
-    await supabase.from('nps_responses').insert({ customer_id: snapshot.customer_id, score: npsScore, comment: npsNote || null, trigger: 'portal' });
     setNpsSent(true);
+    try {
+      const sb = createClient();
+      await sb.from('nps_responses').insert({ score: npsScore, comment: npsNote || null, trigger: 'portal', customer_id: snapshot.customer_id });
+    } catch {}
   };
-  const handleCopy = () => { navigator.clipboard.writeText(referral_code); setCopied(true); setTimeout(() => setCopied(false), 2000); };
 
+  // ─── LAYOUT ─────────────────────────────────────────────────
   return (
-    <>
-      <link rel="preconnect" href="https://fonts.googleapis.com" />
-      <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
-
-      <div style={{ minHeight: '100vh', background: DS.bg, color: DS.tx, fontFamily: DS.font }}>
-
-        {/* HEADER */}
-        <header style={{ position: 'sticky', top: 0, zIndex: 100, background: `${DS.bg}f0`, backdropFilter: 'blur(16px)', borderBottom: `1px solid ${DS.bd}`, height: 58, display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 28px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            <div style={{ background: DS.y, borderRadius: 7, width: 30, height: 30, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 15 }}>☀️</div>
-            <span style={{ fontWeight: 800, fontSize: 16, letterSpacing: '-0.3px' }}>bee<span style={{ color: DS.y }}>-doo</span></span>
-            <span style={{ fontSize: 12, color: DS.dm }}>Portal</span>
+    <div style={{ minHeight: '100vh', background: DS.bg, fontFamily: DS.font, color: DS.tx }}>
+      {/* ── TOP NAV ── */}
+      <nav style={{ position: 'fixed', top: 0, left: 0, right: 0, zIndex: 100, background: 'rgba(10,10,10,0.92)', backdropFilter: 'blur(16px)', borderBottom: `1px solid ${DS.bd}`, height: 58 }}>
+        <div style={{ maxWidth: 1200, margin: '0 auto', padding: '0 24px', height: '100%', display: 'flex', alignItems: 'center', gap: 8 }}>
+          {/* Logo */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginRight: 20, flexShrink: 0 }}>
+            <div style={{ width: 34, height: 34, borderRadius: 10, background: 'linear-gradient(135deg,#F5C500,#f97316)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18 }}>🐝</div>
+            <span style={{ fontWeight: 800, fontSize: 16, color: '#fff', letterSpacing: '-0.3px' }}>bee-doo</span>
           </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-            <span style={{ fontSize: 12, color: DS.dm }}>{snapshot.first_name} {snapshot.last_name}</span>
-            <button onClick={handleLogout} style={{ background: 'transparent', border: `1px solid ${DS.bd}`, borderRadius: 7, color: DS.dm, fontSize: 12, padding: '5px 12px', cursor: 'pointer', fontFamily: DS.font }}>Abmelden</button>
+          {/* Tabs */}
+          <div style={{ display: 'flex', gap: 2, flex: 1, overflowX: 'auto' }}>
+            {TABS.map(t => (
+              <button key={t.id} onClick={() => setTab(t.id)} style={{
+                background: tab === t.id ? DS.yDim : 'transparent',
+                border: `1px solid ${tab === t.id ? DS.yBd : 'transparent'}`,
+                borderRadius: 9, color: tab === t.id ? DS.y : DS.dm,
+                fontFamily: DS.font, fontWeight: tab === t.id ? 700 : 500,
+                fontSize: 13, padding: '6px 14px', cursor: 'pointer',
+                display: 'flex', alignItems: 'center', gap: 6, whiteSpace: 'nowrap',
+                transition: 'all 0.15s',
+              }}>
+                <span style={{ fontSize: 14 }}>{t.icon}</span> {t.label}
+              </button>
+            ))}
           </div>
-        </header>
+          {/* User */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 9, flexShrink: 0, marginLeft: 8 }}>
+            <div style={{ width: 34, height: 34, borderRadius: '50%', background: 'linear-gradient(135deg,#F5C500,#f97316)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 800, color: '#0a0a0a' }}>{initials}</div>
+            <span style={{ fontSize: 13, fontWeight: 600, color: DS.tx }}>{fullName}</span>
+          </div>
+        </div>
+      </nav>
 
-        <div style={{ maxWidth: 1140, margin: '0 auto', padding: '36px 22px 80px' }}>
-
-          {/* HERO */}
-          <div style={{ marginBottom: 32 }}>
-            <h1 style={{ fontSize: 30, fontWeight: 800, letterSpacing: '-0.5px', marginBottom: 5 }}>
-              Hallo, <span style={{ color: DS.y }}>{first_name}</span> ☀️
-            </h1>
-            <p style={{ color: DS.dm, fontSize: 13, marginBottom: 20 }}>Auftrag #{snapshot.project_number} · {snapshot.capacity_kwp} kWp · {snapshot.zip} {snapshot.city}</p>
-
-            <div style={{ display: 'flex', gap: 7, flexWrap: 'wrap', marginBottom: 28 }}>
-              {activeMs && <Chip color="y" dot>{activeMs.title}</Chip>}
-              {snapshot.installation_date && <Chip color="g" dot>Installation: {fmtD(snapshot.installation_date)}</Chip>}
-              <Chip color="b">{documents.length} Dokumente</Chip>
-              <Chip color="y" pointer onClick={() => window.open('https://de.trustpilot.com/review/bee-doo.de', '_blank')}>⭐ Uns bewerten</Chip>
+      {/* ── JOURNEY BAR ── */}
+      <div style={{ paddingTop: 58, background: DS.c1, borderBottom: `1px solid ${DS.bd}` }}>
+        <div style={{ maxWidth: 1200, margin: '0 auto', padding: '18px 24px' }}>
+          {/* Kunde */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16 }}>
+            <div style={{ fontSize: 14, color: DS.dm }}>
+              Guten Tag, <span style={{ fontWeight: 700, color: DS.tx }}>{fullName}</span>
+              {adresse && <span style={{ color: DS.dm }}> · {adresse}, {plz} {ort}</span>}
             </div>
-
-            <div style={{ display: 'flex', gap: 3, background: DS.c1, border: `1px solid ${DS.bd}`, borderRadius: 11, padding: 3, overflowX: 'auto' }}>
-              {TABS.map(t => (
-                <button key={t.id} onClick={() => setTab(t.id)} style={{ flex: 1, minWidth: 100, padding: '8px 10px', borderRadius: 8, border: `1px solid ${tab === t.id ? DS.bd : 'transparent'}`, background: tab === t.id ? DS.c2 : 'transparent', color: tab === t.id ? DS.tx : DS.dm, fontSize: 12, fontWeight: 600, fontFamily: DS.font, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5, whiteSpace: 'nowrap', transition: 'all 0.12s' }}>
-                  <span style={{ color: tab === t.id ? DS.y : 'inherit' }}>{t.icon}</span>{t.label}
-                </button>
-              ))}
-            </div>
           </div>
+          {/* Steps */}
+          <div style={{ display: 'flex', alignItems: 'flex-start', gap: 0, position: 'relative' }}>
+            {JOURNEY_STEPS.map((step, i) => {
+              const done    = i < journeyStep;
+              const current = i === journeyStep;
+              return (
+                <div key={i} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', position: 'relative' }}>
+                  {/* Linie links */}
+                  {i > 0 && (
+                    <div style={{ position: 'absolute', top: 14, right: '50%', left: '-50%', height: 2, background: done ? DS.y : DS.bd, transition: 'background 0.3s' }} />
+                  )}
+                  {/* Kreis */}
+                  <div style={{
+                    width: 30, height: 30, borderRadius: '50%', zIndex: 1,
+                    background: done ? DS.y : current ? DS.y : DS.c2,
+                    border: `2px solid ${done ? DS.y : current ? DS.y : DS.bd}`,
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    fontSize: 13, fontWeight: 700,
+                    color: (done || current) ? '#0a0a0a' : DS.dm,
+                    boxShadow: current ? `0 0 0 4px ${DS.yDim}` : 'none',
+                    transition: 'all 0.3s',
+                  }}>
+                    {done ? '✓' : i + 1}
+                  </div>
+                  {/* Labels */}
+                  <div style={{ marginTop: 8, textAlign: 'center' }}>
+                    <div style={{ fontSize: 10, color: DS.dm, marginBottom: 2 }}>Schritt {i + 1}</div>
+                    <div style={{ fontSize: 11, fontWeight: current || done ? 700 : 400, color: current ? DS.y : done ? DS.tx : DS.dm, whiteSpace: 'pre-line', lineHeight: 1.3 }}>
+                      {step.sub}
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      </div>
 
-          {/* TAB: STATUS */}
-          {tab === 'status' && (
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14, alignItems: 'start' }}>
+      {/* ── MAIN CONTENT ── */}
+      <div style={{ maxWidth: 1200, margin: '0 auto', padding: '28px 24px', display: 'grid', gridTemplateColumns: '1fr 300px', gap: 24, alignItems: 'start' }}>
+
+        {/* ─── LEFT MAIN ─── */}
+        <div>
+
+          {/* ═══ TAB: ÜBERSICHT ═══ */}
+          {tab === 'uebersicht' && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+              {/* Termin-Card */}
               <Card>
-                <Label>Projektfortschritt</Label>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 8 }}>
-                  <div style={{ fontSize: 22, fontWeight: 800 }}>{progressPct} %</div>
-                  <div style={{ fontSize: 12, color: DS.dm }}>Schritt {doneCount}/{milestones.length}</div>
-                </div>
-                <div style={{ height: 5, background: DS.c2, borderRadius: 100, overflow: 'hidden', marginBottom: 28 }}>
-                  <div style={{ height: '100%', width: `${progressPct}%`, background: DS.y, borderRadius: 100, boxShadow: `0 0 8px ${DS.yBd}` }} />
-                </div>
-                {milestones.map((ms, i) => (
-                  <div key={ms.id} style={{ display: 'flex', gap: 14, paddingBottom: i < milestones.length - 1 ? 22 : 0 }}>
-                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', width: 30, flexShrink: 0 }}>
-                      <div style={{ width: 30, height: 30, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 700, border: '2px solid', background: ms.status === 'done' ? DS.greenDim : ms.status === 'active' ? DS.yDim : DS.c2, borderColor: ms.status === 'done' ? DS.green : ms.status === 'active' ? DS.y : DS.bd, zIndex: 1 }}>
-                        {ms.status === 'done' ? '✓' : ms.status === 'active' ? '→' : ''}
-                      </div>
-                      {i < milestones.length - 1 && <div style={{ width: 2, flex: 1, minHeight: 18, margin: '2px 0', background: ms.status === 'done' ? `${DS.green}40` : ms.status === 'active' ? `${DS.y}28` : DS.bd }} />}
-                    </div>
-                    <div style={{ paddingTop: 4, flex: 1 }}>
-                      <div style={{ fontWeight: 600, fontSize: 13, marginBottom: 2, color: ms.status === 'active' ? DS.y : ms.status === 'done' ? DS.tx : DS.dm }}>{ms.title}</div>
-                      <div style={{ fontSize: 11, color: DS.dm }}>{ms.done_date ? fmtD(ms.done_date) : ms.planned_date ? `geplant: ${fmtD(ms.planned_date)}` : ''}</div>
-                      {ms.note && ms.status !== 'pending' && <div style={{ fontSize: 12, color: `${DS.tx}99`, lineHeight: 1.5, marginTop: 3 }}>{ms.note}</div>}
-                    </div>
-                  </div>
-                ))}
-              </Card>
-
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-                <div style={{ background: DS.greenDim, border: '1px solid rgba(34,197,94,0.18)', borderRadius: 10, padding: '12px 16px', display: 'flex', alignItems: 'center', gap: 12 }}>
-                  <span style={{ fontSize: 22 }}>💬</span>
-                  <div>
-                    <div style={{ fontSize: 13, fontWeight: 700, color: DS.green }}>WhatsApp-Benachrichtigungen aktiv</div>
-                    <div style={{ fontSize: 12, color: DS.dm }}>Sie werden automatisch bei jedem Status-Update informiert.</div>
-                  </div>
-                </div>
-                {snapshot.installation_date && (
-                  <Card>
-                    <Label>Nächster Termin</Label>
-                    <div style={{ display: 'flex', gap: 14, alignItems: 'center' }}>
-                      <div style={{ background: DS.yDim, border: `1px solid ${DS.yBd}`, borderRadius: 10, padding: '10px 14px', textAlign: 'center', minWidth: 56, flexShrink: 0 }}>
-                        <div style={{ fontSize: 10, color: DS.dm, textTransform: 'uppercase', letterSpacing: 1 }}>{format(new Date(snapshot.installation_date), 'MMM', { locale: de })}</div>
-                        <div style={{ fontSize: 28, fontWeight: 800, color: DS.y, lineHeight: 1 }}>{format(new Date(snapshot.installation_date), 'd')}</div>
+                <SectionLabel>📅 Ihr nächster Termin</SectionLabel>
+                {termin_at ? (
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, alignItems: 'center' }}>
+                    {/* Termin-Info */}
+                    <div style={{ display: 'flex', gap: 16, alignItems: 'center' }}>
+                      <div style={{ background: DS.y, borderRadius: 12, padding: '12px 16px', textAlign: 'center', minWidth: 64, flexShrink: 0 }}>
+                        <div style={{ fontSize: 11, fontWeight: 700, color: '#0a0a0a', textTransform: 'uppercase' }}>
+                          {format(new Date(termin_at), 'EE', { locale: de })}
+                        </div>
+                        <div style={{ fontSize: 32, fontWeight: 900, color: '#0a0a0a', lineHeight: 1 }}>
+                          {format(new Date(termin_at), 'd', { locale: de })}
+                        </div>
+                        <div style={{ fontSize: 11, fontWeight: 700, color: '#0a0a0a' }}>
+                          {format(new Date(termin_at), 'MMM', { locale: de })}
+                        </div>
                       </div>
                       <div>
-                        <div style={{ fontWeight: 700, marginBottom: 2 }}>Installation</div>
-                        <div style={{ fontSize: 12, color: DS.dm }}>08:00 – ca. 16:00 Uhr</div>
+                        <div style={{ fontWeight: 800, fontSize: 17, marginBottom: 4 }}>Ihr persönliches Erstgespräch</div>
+                        <div style={{ fontSize: 13, color: DS.dm, display: 'flex', alignItems: 'center', gap: 6, marginBottom: 2 }}>
+                          🕐 {fmtT(termin_at)} Uhr (60min)
+                        </div>
+                        <div style={{ fontSize: 13, color: DS.dm, display: 'flex', alignItems: 'center', gap: 6 }}>
+                          📍 Videoanruf
+                          <span style={{ color: DS.y, cursor: 'pointer', fontWeight: 600, fontSize: 12 }}>So funktioniert's →</span>
+                        </div>
                       </div>
                     </div>
-                    <div style={{ height: 1, background: DS.bd, margin: '12px 0' }} />
-                    <div style={{ fontSize: 12, color: DS.dm }}>Fragen: <span style={{ color: DS.y }}>0521 9876 543</span></div>
-                  </Card>
+                    {/* Videoanruf */}
+                    <div style={{ textAlign: 'center' }}>
+                      <button disabled style={{ width: '100%', background: DS.c3, border: `1px solid ${DS.bd}`, borderRadius: 10, padding: '14px 20px', color: DS.dm, fontFamily: DS.font, fontWeight: 600, fontSize: 14, cursor: 'not-allowed', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
+                        📹 Jetzt Videoanruf beitreten →
+                      </button>
+                      <div style={{ fontSize: 11, color: DS.dm, marginTop: 8 }}>Link verfügbar 24h vor dem Termin</div>
+                    </div>
+                  </div>
+                ) : (
+                  <div style={{ textAlign: 'center', color: DS.dm, padding: '32px 0', fontSize: 13 }}>
+                    Kein Termin gefunden. Bitte kontaktieren Sie uns.
+                  </div>
                 )}
-                <Card>
-                  <Label>Ihre Anlage</Label>
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-                    {[['Leistung', snapshot.capacity_kwp ? `${snapshot.capacity_kwp} kWp` : '–'], ['Speicher', snapshot.storage_kwh ? `${snapshot.storage_kwh} kWh` : '–'], ['Module', snapshot.module_count ? `${snapshot.module_count} Stück` : '–'], ['Wechselrichter', snapshot.inverter_model ?? '–'], ['Ausrichtung', snapshot.orientation ?? '–'], ['Jahresprognose', snapshot.annual_yield_kwh ? `${fmt(snapshot.annual_yield_kwh)} kWh` : '–']].map(([l, v]) => (
-                      <div key={l}>
-                        <div style={{ fontSize: 10, color: DS.dm, textTransform: 'uppercase', letterSpacing: 0.8, marginBottom: 2 }}>{l}</div>
-                        <div style={{ fontSize: 13, fontWeight: 600 }}>{v}</div>
+              </Card>
+
+              {/* Vorbereitung */}
+              <Card>
+                <SectionLabel>📋 So bereiten Sie sich vor</SectionLabel>
+                <div style={{ background: DS.c2, border: `1px solid ${DS.bd}`, borderRadius: 10, padding: '14px 18px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', cursor: 'pointer' }}
+                  onClick={() => setUploadModal('intro')}
+                  onMouseEnter={e => (e.currentTarget.style.borderColor = DS.bdHov)}
+                  onMouseLeave={e => (e.currentTarget.style.borderColor = DS.bd)}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+                    <div style={{ width: 38, height: 38, borderRadius: 9, background: DS.yDim, border: `1px solid ${DS.yBd}`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18 }}>📄</div>
+                    <div>
+                      <div style={{ fontWeight: 600, fontSize: 14 }}>Stromrechnung hochladen <span style={{ color: DS.dm, fontWeight: 400, fontSize: 12 }}>(optional)</span></div>
+                      <div style={{ fontSize: 12, color: DS.dm }}>Helfen Sie uns, Ihr Solar-Angebot vorzubereiten</div>
+                    </div>
+                  </div>
+                  <span style={{ color: DS.dm, fontSize: 18 }}>›</span>
+                </div>
+              </Card>
+
+              {/* Was erwartet Sie */}
+              <Card>
+                <SectionLabel>💡 Was erwartet Sie im Erstgespräch?</SectionLabel>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                  {[
+                    'Ihr individuelles Angebot mit dem größten Einsparpotential',
+                    'Eine persönliche & kompetente Beratung mit Fokus auf Ihre Bedürfnisse',
+                    'Besprechung aller Infos zu Kosten, Einsparungen und Förderungen',
+                  ].map((t, i) => (
+                    <div key={i} style={{ display: 'flex', gap: 10, alignItems: 'flex-start' }}>
+                      <div style={{ width: 20, height: 20, borderRadius: '50%', background: DS.greenDim, border: '1px solid rgba(34,197,94,0.25)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, marginTop: 1 }}>
+                        <span style={{ color: '#22c55e', fontSize: 11, fontWeight: 700 }}>✓</span>
+                      </div>
+                      <div style={{ fontSize: 14, color: DS.tx }}>{t}</div>
+                    </div>
+                  ))}
+                </div>
+              </Card>
+
+              {/* 2-Spalten: Einsparpotential Preview + Infos */}
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+                <Card style={{ cursor: 'pointer', position: 'relative', overflow: 'hidden', minHeight: 160 }}
+                  onClick={() => setTab('einsparpotential')}>
+                  <SectionLabel>€ Ihr Einsparpotential ›</SectionLabel>
+                  <div style={{ display: 'flex', alignItems: 'flex-end', gap: 3, height: 80, padding: '0 8px' }}>
+                    {[40,55,48,72,90,85,95,88,78,82,91,100].map((h, i) => (
+                      <div key={i} style={{ flex: 1, borderRadius: '3px 3px 0 0', background: `rgba(34,197,94,${0.15 + i*0.07})`, height: `${h}%` }} />
+                    ))}
+                  </div>
+                  {!isAfterBeratung && <LockedOverlay text="Nach dem Erstgespräch freigeschaltet" />}
+                </Card>
+
+                <Card style={{ cursor: 'pointer' }} onClick={() => setTab('informationen')}>
+                  <SectionLabel>📰 Wichtige Infos für Sie</SectionLabel>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                    {ARTIKEL.slice(0, 3).map((a, i) => (
+                      <div key={i} style={{ display: 'flex', gap: 10, alignItems: 'center', padding: '6px 0', borderBottom: i < 2 ? `1px solid ${DS.bd}` : 'none' }}>
+                        <span style={{ fontSize: 18 }}>{a.icon}</span>
+                        <div>
+                          <div style={{ fontSize: 12, fontWeight: 600, color: DS.tx }}>{a.title}</div>
+                          <div style={{ fontSize: 11, color: DS.dm }}>{a.sub}</div>
+                        </div>
+                        <span style={{ marginLeft: 'auto', color: DS.dm, fontSize: 14 }}>›</span>
                       </div>
                     ))}
                   </div>
@@ -227,219 +385,431 @@ export default function PortalClient({ snapshot, milestones, documents, monitori
             </div>
           )}
 
-          {/* TAB: DOKUMENTE */}
-          {tab === 'dokumente' && (
-            <div>
-              <SectionTitle>Dokumente <Badge>{documents.length}</Badge></SectionTitle>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
-                {documents.map(doc => (
-                  <a key={doc.id} href={doc.download_url ?? '#'} target="_blank" rel="noreferrer" style={{ textDecoration: 'none' }}>
-                    <div style={{ background: DS.c1, border: `1px solid ${DS.bd}`, borderRadius: 10, padding: 14, display: 'flex', alignItems: 'center', gap: 12, cursor: 'pointer', transition: 'border-color 0.12s' }} onMouseEnter={e => (e.currentTarget.style.borderColor = DS.yBd)} onMouseLeave={e => (e.currentTarget.style.borderColor = DS.bd)}>
-                      <div style={{ width: 38, height: 38, borderRadius: 8, background: 'rgba(239,68,68,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18, flexShrink: 0 }}>📄</div>
-                      <div style={{ flex: 1, minWidth: 0 }}>
-                        <div style={{ fontSize: 13, fontWeight: 600, color: DS.tx, marginBottom: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{doc.file_name}</div>
-                        <div style={{ fontSize: 11, color: DS.dm }}>{doc.file_size ? `${(doc.file_size/1024/1024).toFixed(1)} MB · ` : ''}{format(new Date(doc.uploaded_at), 'd. MMM yyyy', { locale: de })}</div>
-                      </div>
-                      <span style={{ color: DS.y }}>⬇</span>
-                    </div>
-                  </a>
-                ))}
-                {!documents.length && <div style={{ gridColumn: 'span 2', textAlign: 'center', color: DS.dm, padding: 48, fontSize: 13 }}>Dokumente werden nach Installation hochgeladen.</div>}
-              </div>
-            </div>
-          )}
-
-          {/* TAB: MONITORING */}
-          {tab === 'monitoring' && (
-            <div>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 12, marginBottom: 14 }}>
-                {[{ icon: '⚡', label: 'Produziert', val: `${fmt(total_kwh)} kWh`, color: DS.y }, { icon: '🌿', label: 'CO₂ gespart', val: `${fmt(total_co2_kg)} kg`, color: DS.green }, { icon: '💶', label: 'Ersparnis', val: `€ ${fmt(total_revenue_eur)}`, color: DS.blue }].map(m => (
-                  <Card key={m.label} style={{ padding: 18 }}>
-                    <div style={{ fontSize: 20, marginBottom: 8 }}>{m.icon}</div>
-                    <div style={{ fontSize: 10, color: DS.dm, textTransform: 'uppercase', letterSpacing: 1, marginBottom: 4 }}>{m.label}</div>
-                    <div style={{ fontSize: 24, fontWeight: 800, color: m.color }}>{m.val}</div>
-                  </Card>
-                ))}
-              </div>
-              {chartData.length > 0 ? (
-                <>
-                  <Card style={{ marginBottom: 12 }}>
-                    <Label>Monatliche Produktion (kWh)</Label>
-                    <ResponsiveContainer width="100%" height={200}>
-                      <AreaChart data={chartData} margin={{ top: 4, right: 4, left: -20, bottom: 0 }}>
-                        <defs><linearGradient id="yg" x1="0" y1="0" x2="0" y2="1"><stop offset="10%" stopColor={DS.y} stopOpacity={0.22} /><stop offset="90%" stopColor={DS.y} stopOpacity={0} /></linearGradient></defs>
-                        <CartesianGrid stroke={DS.bd} strokeDasharray="3 3" />
-                        <XAxis dataKey="label" tick={{ fill: DS.dm, fontSize: 11, fontFamily: DS.font }} axisLine={false} tickLine={false} />
-                        <YAxis tick={{ fill: DS.dm, fontSize: 11, fontFamily: DS.font }} axisLine={false} tickLine={false} />
-                        <Tooltip content={<ChartTip />} />
-                        <Area type="monotone" dataKey="production_kwh" stroke={DS.y} strokeWidth={2} fill="url(#yg)" />
-                      </AreaChart>
-                    </ResponsiveContainer>
-                  </Card>
-                  <Card>
-                    <Label>CO₂-Einsparung (kg)</Label>
-                    <ResponsiveContainer width="100%" height={160}>
-                      <BarChart data={chartData} margin={{ top: 4, right: 4, left: -20, bottom: 0 }}>
-                        <CartesianGrid stroke={DS.bd} strokeDasharray="3 3" />
-                        <XAxis dataKey="label" tick={{ fill: DS.dm, fontSize: 11, fontFamily: DS.font }} axisLine={false} tickLine={false} />
-                        <YAxis tick={{ fill: DS.dm, fontSize: 11, fontFamily: DS.font }} axisLine={false} tickLine={false} />
-                        <Tooltip content={<ChartTip />} />
-                        <Bar dataKey="co2_saved_kg" fill={DS.green} opacity={0.75} radius={[4, 4, 0, 0]} />
-                      </BarChart>
-                    </ResponsiveContainer>
-                  </Card>
-                </>
-              ) : <Card style={{ textAlign: 'center', color: DS.dm, padding: 48, fontSize: 13 }}>Monitoring-Daten stehen nach der Inbetriebnahme zur Verfügung.</Card>}
-            </div>
-          )}
-
-          {/* TAB: BEWERTUNGEN */}
-          {tab === 'bewertungen' && (
-            <div>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20, flexWrap: 'wrap', gap: 14 }}>
-                <div>
-                  <SectionTitle>Was unsere Kunden sagen</SectionTitle>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: -12 }}>
-                    <Stars n={5} size={18} />
-                    <span style={{ fontSize: 20, fontWeight: 800 }}>4,8</span>
-                    <span style={{ fontSize: 12, color: DS.dm }}>· Trustpilot{revSource === 'demo' ? ' (Beispiel)' : ''}</span>
-                  </div>
+          {/* ═══ TAB: IHR SYSTEM ═══ */}
+          {tab === 'system' && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+              <Card>
+                <SectionLabel>🏠 Ihr maßgeschneidertes bee-doo System</SectionLabel>
+                <div style={{ fontSize: 13, color: DS.dm, marginBottom: 20 }}>
+                  Entdecken Sie Klick für Klick, wie unsere Komponenten zusammen ein nachhaltiges Energiesystem bilden.
                 </div>
-                <a href="https://de.trustpilot.com/review/bee-doo.de" target="_blank" rel="noreferrer"
-                  style={{ background: DS.y, color: DS.bg, borderRadius: 9, padding: '9px 18px', fontWeight: 700, fontSize: 13, textDecoration: 'none' }}>
-                  ⭐ Bewertung schreiben
-                </a>
-              </div>
-
-              {/* CTA */}
-              <div style={{ background: DS.yDim, border: `1px solid ${DS.yBd}`, borderRadius: 10, padding: '14px 18px', marginBottom: 20, display: 'flex', alignItems: 'center', gap: 14 }}>
-                <span style={{ fontSize: 24 }}>🙏</span>
-                <div>
-                  <div style={{ fontWeight: 700, fontSize: 13, marginBottom: 2 }}>Helfen Sie anderen Hausbesitzern!</div>
-                  <div style={{ fontSize: 12, color: DS.dm }}>Teilen Sie Ihre Erfahrung auf Trustpilot.{' '}
-                    <a href="https://de.trustpilot.com/review/bee-doo.de" target="_blank" rel="noreferrer" style={{ color: DS.y, textDecoration: 'none', fontWeight: 700 }}>Jetzt bewerten →</a>
+                {!isAfterBeratung && (
+                  <div style={{ background: DS.yDim, border: `1px solid ${DS.yBd}`, borderRadius: 9, padding: '10px 14px', fontSize: 12, color: DS.y, marginBottom: 16 }}>
+                    ℹ️ Ihre persönliche Konfiguration wird nach dem Erstgespräch angezeigt.
                   </div>
-                </div>
-              </div>
-
-              {revLoading ? (
-                <div style={{ textAlign: 'center', color: DS.dm, padding: 48 }}>Lade Bewertungen…</div>
-              ) : (
+                )}
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-                  {reviews.map(r => (
-                    <div key={r.id} style={{ background: DS.c1, border: `1px solid ${DS.bd}`, borderRadius: 12, padding: 20, transition: 'border-color 0.12s' }}
-                      onMouseEnter={e => (e.currentTarget.style.borderColor = DS.yBd)} onMouseLeave={e => (e.currentTarget.style.borderColor = DS.bd)}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
-                        <Stars n={r.stars} />
-                        <span style={{ fontSize: 11, color: DS.dm }}>{format(new Date(r.created_at_tp), 'MMM yyyy', { locale: de })}</span>
+                  {SYSTEM_COMPONENTS.map((c, i) => (
+                    <div key={i} style={{ background: DS.c2, border: `1px solid ${DS.bd}`, borderRadius: 12, padding: '16px 18px', display: 'flex', gap: 14, alignItems: 'flex-start', transition: 'all 0.15s', cursor: 'pointer' }}
+                      onMouseEnter={e => { (e.currentTarget as HTMLElement).style.borderColor = DS.bdHov; }}
+                      onMouseLeave={e => { (e.currentTarget as HTMLElement).style.borderColor = DS.bd; }}>
+                      <span style={{ fontSize: 28, flexShrink: 0 }}>{c.icon}</span>
+                      <div>
+                        <div style={{ fontWeight: 700, fontSize: 14, marginBottom: 4 }}>{c.name}</div>
+                        <div style={{ fontSize: 12, color: DS.dm, lineHeight: 1.5 }}>{c.desc}</div>
                       </div>
-                      {r.title && <div style={{ fontWeight: 700, fontSize: 13, marginBottom: 6 }}>{r.title}</div>}
-                      <div style={{ fontSize: 13, color: `${DS.tx}cc`, lineHeight: 1.6, marginBottom: 12 }}>
-                        {r.text.length > 200 ? r.text.substring(0, 200) + '…' : r.text}
-                      </div>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 8, paddingTop: 10, borderTop: `1px solid ${DS.bd}` }}>
-                        <div style={{ width: 26, height: 26, borderRadius: '50%', background: DS.c2, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 700, color: DS.y, flexShrink: 0 }}>{r.author_name.charAt(0)}</div>
-                        <div>
-                          <div style={{ fontSize: 12, fontWeight: 600 }}>{r.author_name}</div>
-                          {r.author_location && <div style={{ fontSize: 10, color: DS.dm }}>{r.author_location}</div>}
-                        </div>
-                      </div>
-                      {r.response && (
-                        <div style={{ marginTop: 10, background: DS.c2, borderRadius: 8, padding: '9px 12px', borderLeft: `3px solid ${DS.y}` }}>
-                          <div style={{ fontSize: 10, color: DS.y, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 1, marginBottom: 3 }}>bee-doo antwortet</div>
-                          <div style={{ fontSize: 12, color: DS.dm, lineHeight: 1.5 }}>{r.response.length > 130 ? r.response.substring(0, 130) + '…' : r.response}</div>
-                        </div>
-                      )}
+                      <span style={{ marginLeft: 'auto', color: DS.dm, flexShrink: 0 }}>›</span>
                     </div>
                   ))}
                 </div>
-              )}
-              <div style={{ textAlign: 'center', marginTop: 24, fontSize: 12, color: DS.dm }}>
-                Bewertungen von{' '}
-                <a href="https://de.trustpilot.com/review/bee-doo.de" target="_blank" rel="noreferrer" style={{ color: '#00b67a', fontWeight: 700, textDecoration: 'none' }}>★ Trustpilot</a>
-                {' '}· Nur verifizierte Käufer · mind. 4 Sterne
-              </div>
+              </Card>
+
+              {/* Dachplanung */}
+              <Card style={{ overflow: 'hidden', position: 'relative' }}>
+                <SectionLabel>🛰️ Dachplanung</SectionLabel>
+                <div style={{ position: 'relative', borderRadius: 10, overflow: 'hidden', height: 260 }}>
+                  {isAfterBeratung ? (
+                    <img src={mapUrl} alt="Dachplanung" style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: 10 }} />
+                  ) : (
+                    <div style={{ width: '100%', height: '100%', background: DS.c2, borderRadius: 10, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 10 }}>
+                      <span style={{ fontSize: 36 }}>🔒</span>
+                      <div style={{ fontWeight: 600, fontSize: 14 }}>Dachplanung</div>
+                      <div style={{ fontSize: 13, color: DS.dm }}>Steht Ihnen nach dem Erstgespräch zur Verfügung</div>
+                    </div>
+                  )}
+                </div>
+              </Card>
             </div>
           )}
 
-          {/* TAB: REFERRAL */}
-          {tab === 'referral' && (
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14, alignItems: 'start' }}>
-              <div>
-                <SectionTitle>Freunde empfehlen</SectionTitle>
-                <div style={{ background: DS.yDim, border: `1px solid ${DS.yBd}`, borderRadius: 14, padding: 26, textAlign: 'center', marginBottom: 12 }}>
-                  <div style={{ fontSize: 10, color: DS.dm, textTransform: 'uppercase', letterSpacing: 1.2, marginBottom: 10 }}>Ihr persönlicher Code</div>
-                  <div style={{ fontSize: 36, fontWeight: 900, letterSpacing: 4, color: DS.y, marginBottom: 14 }}>{referral_code}</div>
-                  <button onClick={handleCopy} style={{ background: DS.y, color: DS.bg, border: 'none', borderRadius: 9, padding: '9px 22px', fontSize: 13, fontWeight: 700, fontFamily: DS.font, cursor: 'pointer' }}>{copied ? '✓ Kopiert!' : 'Code kopieren'}</button>
-                </div>
-                <Card>
-                  <div style={{ fontWeight: 700, marginBottom: 14 }}>So funktioniert's</div>
-                  {['Code weitergeben', 'Kontakt schließt bee-doo Vertrag ab', '€ 250 Bonus für Sie – automatisch'].map((s, i) => (
-                    <div key={i} style={{ display: 'flex', gap: 10, marginBottom: i < 2 ? 10 : 0, alignItems: 'flex-start' }}>
-                      <div style={{ width: 22, height: 22, borderRadius: '50%', background: DS.yDim, border: `1px solid ${DS.yBd}`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, fontWeight: 700, color: DS.y, flexShrink: 0 }}>{i + 1}</div>
-                      <div style={{ fontSize: 13, color: DS.dm, paddingTop: 2 }}>{s}</div>
-                    </div>
-                  ))}
-                  <div style={{ height: 1, background: DS.bd, margin: '14px 0' }} />
-                  <div style={{ fontSize: 12, color: DS.dm }}>Empfohlen: <span style={{ color: DS.y, fontWeight: 700 }}>{referral_count}</span> · Bonus: <span style={{ color: DS.y, fontWeight: 700 }}>€ {fmt(referral_bonus_total)}</span></div>
-                </Card>
+          {/* ═══ TAB: EINSPARPOTENTIAL ═══ */}
+          {tab === 'einsparpotential' && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+              {/* Stats */}
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 12 }}>
+                {[
+                  { icon: '⚡', label: 'Produziert', val: `${fmt(total_kwh)} kWh`,  color: DS.y    },
+                  { icon: '🌿', label: 'CO₂ gespart', val: `${fmt(total_co2)} kg`,   color: DS.green },
+                  { icon: '💶', label: 'Ersparnis',   val: `€ ${fmt(total_eur)}`,    color: DS.blue  },
+                ].map(m => (
+                  <Card key={m.label} style={{ textAlign: 'center', padding: 20, position: 'relative', overflow: 'hidden' }}>
+                    <div style={{ fontSize: 24, marginBottom: 8 }}>{m.icon}</div>
+                    <div style={{ fontSize: 10, color: DS.dm, textTransform: 'uppercase', letterSpacing: 1, marginBottom: 4 }}>{m.label}</div>
+                    <div style={{ fontSize: 26, fontWeight: 800, color: m.color }}>{m.val}</div>
+                    {!isAfterBeratung && <LockedOverlay text="" />}
+                  </Card>
+                ))}
               </div>
-              <div>
-                <SectionTitle>Ihre Meinung</SectionTitle>
-                {!npsSent ? (
-                  <Card style={{ marginBottom: 12 }}>
-                    <div style={{ fontWeight: 600, fontSize: 14, marginBottom: 14 }}>Wie wahrscheinlich empfehlen Sie bee-doo?</div>
-                    <div style={{ display: 'flex', gap: 3, marginBottom: 7 }}>
-                      {Array.from({ length: 11 }, (_, n) => (
-                        <button key={n} onClick={() => setNpsScore(n)} style={{ flex: 1, aspectRatio: '1', borderRadius: 6, border: `1px solid ${npsScore === n ? DS.y : DS.bd}`, background: npsScore === n ? DS.yDim : DS.c2, color: npsScore === n ? DS.y : DS.dm, fontSize: 11, fontWeight: 700, cursor: 'pointer', fontFamily: DS.font, transition: 'all 0.1s' }}>{n}</button>
+
+              {/* Chart */}
+              <Card style={{ position: 'relative', overflow: 'hidden' }}>
+                <SectionLabel>📈 Monatliche Produktion (kWh)</SectionLabel>
+                {chartData.length > 0 ? (
+                  <ResponsiveContainer width="100%" height={220}>
+                    <AreaChart data={chartData} margin={{ top: 4, right: 4, left: -20, bottom: 0 }}>
+                      <defs>
+                        <linearGradient id="yg" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="10%" stopColor={DS.y} stopOpacity={0.25} />
+                          <stop offset="90%" stopColor={DS.y} stopOpacity={0} />
+                        </linearGradient>
+                      </defs>
+                      <CartesianGrid stroke={DS.bd} strokeDasharray="3 3" />
+                      <XAxis dataKey="label" tick={{ fill: DS.dm, fontSize: 11, fontFamily: DS.font }} axisLine={false} tickLine={false} />
+                      <YAxis tick={{ fill: DS.dm, fontSize: 11, fontFamily: DS.font }} axisLine={false} tickLine={false} />
+                      <Tooltip content={<ChartTip />} />
+                      <Area type="monotone" dataKey="production_kwh" stroke={DS.y} strokeWidth={2} fill="url(#yg)" />
+                    </AreaChart>
+                  </ResponsiveContainer>
+                ) : (
+                  <div style={{ height: 220, display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: 8 }}>
+                    {/* Demo blur chart */}
+                    <div style={{ display: 'flex', alignItems: 'flex-end', gap: 4, height: 140, filter: 'blur(3px)', opacity: 0.4 }}>
+                      {[30,45,60,52,80,95,88,76,82,91,70,100].map((h,i) => (
+                        <div key={i} style={{ width: 22, borderRadius: '3px 3px 0 0', background: `rgba(245,197,0,0.6)`, height: `${h}%` }} />
                       ))}
                     </div>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 10, color: DS.dm, marginBottom: 14 }}><span>Gar nicht</span><span>Sehr wahrscheinlich</span></div>
-                    {npsScore !== null && (
-                      <>
-                        <textarea value={npsNote} onChange={e => setNpsNote(e.target.value)} placeholder="Optionaler Kommentar…" rows={3} style={{ width: '100%', background: DS.c2, border: `1px solid ${DS.bd}`, borderRadius: 7, color: DS.tx, fontSize: 13, padding: 10, fontFamily: DS.font, resize: 'vertical', marginBottom: 10, boxSizing: 'border-box' }} />
-                        <button onClick={handleNps} style={{ background: DS.y, color: DS.bg, border: 'none', borderRadius: 8, padding: '9px 18px', fontWeight: 700, fontSize: 13, fontFamily: DS.font, cursor: 'pointer' }}>Absenden</button>
-                      </>
-                    )}
-                  </Card>
+                    <span style={{ fontSize: 13, color: DS.dm }}>Verfügbar nach Inbetriebnahme</span>
+                  </div>
+                )}
+                {!isAfterBeratung && <LockedOverlay text="Nach dem Erstgespräch freigeschaltet" />}
+              </Card>
+
+              {/* CO2 */}
+              <Card style={{ position: 'relative', overflow: 'hidden' }}>
+                <SectionLabel>🌍 CO₂-Einsparung (kg)</SectionLabel>
+                {chartData.length > 0 ? (
+                  <ResponsiveContainer width="100%" height={160}>
+                    <BarChart data={chartData} margin={{ top: 4, right: 4, left: -20, bottom: 0 }}>
+                      <CartesianGrid stroke={DS.bd} strokeDasharray="3 3" />
+                      <XAxis dataKey="label" tick={{ fill: DS.dm, fontSize: 11, fontFamily: DS.font }} axisLine={false} tickLine={false} />
+                      <YAxis tick={{ fill: DS.dm, fontSize: 11, fontFamily: DS.font }} axisLine={false} tickLine={false} />
+                      <Tooltip content={<ChartTip />} />
+                      <Bar dataKey="co2_saved_kg" fill={DS.green} opacity={0.7} radius={[4, 4, 0, 0]} />
+                    </BarChart>
+                  </ResponsiveContainer>
                 ) : (
-                  <Card style={{ textAlign: 'center', marginBottom: 12 }}>
+                  <div style={{ height: 160, display: 'flex', alignItems: 'center', justifyContent: 'center', color: DS.dm, fontSize: 13 }}>
+                    Daten nach Inbetriebnahme
+                  </div>
+                )}
+                {!isAfterBeratung && <LockedOverlay text="" />}
+              </Card>
+            </div>
+          )}
+
+          {/* ═══ TAB: INFORMATIONEN ═══ */}
+          {tab === 'informationen' && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+              {/* Featured */}
+              <Card style={{ display: 'flex', gap: 20, alignItems: 'center' }}>
+                <div style={{ width: 120, height: 80, borderRadius: 10, background: 'linear-gradient(135deg, #1a1a1a, #2a2a2a)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 36, flexShrink: 0 }}>
+                  🌞
+                </div>
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontSize: 10, color: DS.y, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 1, marginBottom: 6 }}>Empfohlen für Sie</div>
+                  <div style={{ fontWeight: 700, fontSize: 16, marginBottom: 6 }}>Ihr Online-Beratungstermin — was Sie erwartet</div>
+                  <div style={{ fontSize: 13, color: DS.dm, lineHeight: 1.5 }}>In Ihrem Beratungstermin schauen wir uns gemeinsam an, wie eine bee-doo Lösung für Ihr Zuhause aussehen kann.</div>
+                </div>
+                <button style={{ background: DS.y, color: '#0a0a0a', border: 'none', borderRadius: 9, padding: '10px 18px', fontSize: 13, fontWeight: 700, fontFamily: DS.font, cursor: 'pointer', flexShrink: 0 }}>
+                  Weiterlesen →
+                </button>
+              </Card>
+
+              {/* Grid */}
+              <div>
+                <div style={{ fontSize: 14, fontWeight: 700, marginBottom: 14, color: DS.dm }}>Für Sie ausgewählte Artikel</div>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 14 }}>
+                  {ARTIKEL.map((a, i) => (
+                    <div key={i} style={{ background: DS.c1, border: `1px solid ${DS.bd}`, borderRadius: 12, padding: 18, cursor: 'pointer', transition: 'all 0.15s' }}
+                      onMouseEnter={e => { (e.currentTarget as HTMLElement).style.borderColor = DS.bdHov; (e.currentTarget as HTMLElement).style.background = DS.c2; }}
+                      onMouseLeave={e => { (e.currentTarget as HTMLElement).style.borderColor = DS.bd;   (e.currentTarget as HTMLElement).style.background = DS.c1; }}>
+                      <div style={{ width: '100%', height: 100, borderRadius: 8, background: `linear-gradient(135deg, #1a1a1a, #2a2a2a)`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 40, marginBottom: 12 }}>{a.icon}</div>
+                      <div style={{ fontWeight: 700, fontSize: 13, marginBottom: 4, lineHeight: 1.3 }}>{a.title}</div>
+                      <div style={{ fontSize: 11, color: DS.dm, marginBottom: 10 }}>{a.sub}</div>
+                      <div style={{ color: DS.y, fontSize: 12, fontWeight: 600 }}>Mehr erfahren →</div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* NPS / Bewertung */}
+              <Card>
+                <SectionLabel>⭐ Ihre Meinung zählt</SectionLabel>
+                {!npsSent ? (
+                  <div>
+                    <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 14 }}>Wie wahrscheinlich empfehlen Sie bee-doo weiter?</div>
+                    <div style={{ display: 'flex', gap: 4, marginBottom: 8, flexWrap: 'wrap' }}>
+                      {Array.from({length:11}, (_,n) => (
+                        <button key={n} onClick={() => setNpsScore(n)} style={{ width: 38, height: 38, borderRadius: 8, border: `1px solid ${npsScore === n ? DS.y : DS.bd}`, background: npsScore === n ? DS.yDim : DS.c2, color: npsScore === n ? DS.y : DS.dm, fontSize: 12, fontWeight: 700, cursor: 'pointer', fontFamily: DS.font, transition: 'all 0.1s' }}>{n}</button>
+                      ))}
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, color: DS.dm, marginBottom: 14 }}>
+                      <span>Gar nicht</span><span>Sehr wahrscheinlich</span>
+                    </div>
+                    {npsScore !== null && (
+                      <div style={{ display: 'flex', gap: 10, alignItems: 'flex-end' }}>
+                        <textarea value={npsNote} onChange={e => setNpsNote(e.target.value)} placeholder="Optionaler Kommentar…" rows={2} style={{ flex: 1, background: DS.c2, border: `1px solid ${DS.bd}`, borderRadius: 8, color: DS.tx, fontSize: 13, padding: 10, fontFamily: DS.font, resize: 'none', boxSizing: 'border-box' as any }} />
+                        <button onClick={handleNps} style={{ background: DS.y, color: '#0a0a0a', border: 'none', borderRadius: 8, padding: '10px 18px', fontWeight: 700, fontSize: 13, fontFamily: DS.font, cursor: 'pointer', whiteSpace: 'nowrap' }}>Absenden</button>
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <div style={{ textAlign: 'center', padding: '20px 0' }}>
                     <div style={{ fontSize: 32, marginBottom: 8 }}>🙏</div>
                     <div style={{ fontWeight: 700, marginBottom: 4 }}>Vielen Dank!</div>
                     <div style={{ fontSize: 13, color: DS.dm }}>Ihr Feedback hilft uns, besser zu werden.</div>
-                  </Card>
-                )}
-                <SectionTitle style={{ marginTop: 6 }}>Das könnte Sie interessieren</SectionTitle>
-                {[{ icon: '🔋', name: 'Batteriespeicher-Upgrade', desc: 'Kapazität auf 20 kWh erweitern' }, { icon: '🚗', name: 'Wallbox', desc: 'Laden mit eigenem Sonnenstrom' }, { icon: '🌡️', name: 'Wärmepumpe', desc: 'Heizen & kühlen mit Solarstrom' }].map(u => (
-                  <div key={u.name} style={{ background: DS.c1, border: `1px solid ${DS.bd}`, borderRadius: 9, padding: '12px 16px', display: 'flex', alignItems: 'center', gap: 12, cursor: 'pointer', marginBottom: 8, transition: 'all 0.12s' }}
-                    onMouseEnter={e => { (e.currentTarget as HTMLElement).style.borderColor = DS.yBd; (e.currentTarget as HTMLElement).style.background = DS.c2; }}
-                    onMouseLeave={e => { (e.currentTarget as HTMLElement).style.borderColor = DS.bd; (e.currentTarget as HTMLElement).style.background = DS.c1; }}>
-                    <span style={{ fontSize: 24 }}>{u.icon}</span>
-                    <div><div style={{ fontWeight: 600, fontSize: 13, marginBottom: 1 }}>{u.name}</div><div style={{ fontSize: 12, color: DS.dm }}>{u.desc}</div></div>
-                    <div style={{ marginLeft: 'auto', color: DS.dm }}>→</div>
                   </div>
-                ))}
-              </div>
+                )}
+              </Card>
+            </div>
+          )}
+
+          {/* ═══ TAB: DOKUMENTE ═══ */}
+          {tab === 'dokumente' && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+              {/* Noch zu erledigen */}
+              <Card>
+                <SectionLabel>⏳ Noch zu erledigen</SectionLabel>
+                <div style={{ background: DS.c2, border: `1px solid ${DS.bd}`, borderRadius: 10, padding: '14px 18px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', cursor: 'pointer' }}
+                  onClick={() => setUploadModal('intro')}
+                  onMouseEnter={e => (e.currentTarget.style.borderColor = DS.bdHov)}
+                  onMouseLeave={e => (e.currentTarget.style.borderColor = DS.bd)}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+                    <div style={{ width: 38, height: 38, borderRadius: 9, background: DS.yDim, border: `1px solid ${DS.yBd}`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18 }}>📄</div>
+                    <div>
+                      <div style={{ fontWeight: 600, fontSize: 14 }}>Stromrechnung hochladen <span style={{ color: DS.dm, fontWeight: 400, fontSize: 12 }}>(optional)</span></div>
+                      <div style={{ fontSize: 12, color: DS.dm }}>Helfen Sie uns, Ihr Solar-Angebot vorzubereiten</div>
+                    </div>
+                  </div>
+                  <span style={{ color: DS.dm, fontSize: 18 }}>›</span>
+                </div>
+              </Card>
+
+              {/* Dokumente-Liste */}
+              <Card>
+                <SectionLabel>📁 Dokumente</SectionLabel>
+                {documents.length > 0 ? (
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+                    {documents.map((doc: any) => (
+                      <a key={doc.id} href={doc.download_url ?? '#'} target="_blank" rel="noreferrer" style={{ textDecoration: 'none' }}>
+                        <div style={{ background: DS.c2, border: `1px solid ${DS.bd}`, borderRadius: 10, padding: '14px 16px', display: 'flex', gap: 12, alignItems: 'center', transition: 'all 0.15s', cursor: 'pointer' }}
+                          onMouseEnter={e => (e.currentTarget.style.borderColor = DS.bdHov)}
+                          onMouseLeave={e => (e.currentTarget.style.borderColor = DS.bd)}>
+                          <div style={{ width: 36, height: 36, borderRadius: 8, background: 'rgba(239,68,68,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18, flexShrink: 0 }}>📄</div>
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            <div style={{ fontSize: 13, fontWeight: 600, color: DS.tx, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{doc.file_name}</div>
+                            <div style={{ fontSize: 11, color: DS.dm }}>{doc.file_size ? `${(doc.file_size/1024/1024).toFixed(1)} MB · ` : ''}{format(new Date(doc.uploaded_at), 'd. MMM yyyy', { locale: de })}</div>
+                          </div>
+                          <span style={{ color: DS.y, fontSize: 16 }}>⬇</span>
+                        </div>
+                      </a>
+                    ))}
+                  </div>
+                ) : (
+                  <div style={{ textAlign: 'center', color: DS.dm, padding: '48px 0', fontSize: 13 }}>
+                    <div style={{ fontSize: 32, marginBottom: 10 }}>📂</div>
+                    Noch keine Dokumente vorhanden.<br />
+                    <span style={{ fontSize: 12 }}>Dokumente werden nach Ihrem Beratungsgespräch hochgeladen.</span>
+                  </div>
+                )}
+              </Card>
+
+              {/* Empfehlen */}
+              <Card>
+                <SectionLabel>🎁 Freunde empfehlen & 250€ sichern</SectionLabel>
+                <div style={{ display: 'flex', gap: 20, alignItems: 'center' }}>
+                  <div style={{ background: DS.yDim, border: `1px solid ${DS.yBd}`, borderRadius: 12, padding: '14px 24px', textAlign: 'center', flexShrink: 0 }}>
+                    <div style={{ fontSize: 10, color: DS.dm, textTransform: 'uppercase', letterSpacing: 1, marginBottom: 6 }}>Ihr Code</div>
+                    <div style={{ fontSize: 28, fontWeight: 900, letterSpacing: 3, color: DS.y, marginBottom: 10 }}>{referral_code}</div>
+                    <button onClick={handleCopy} style={{ background: DS.y, color: '#0a0a0a', border: 'none', borderRadius: 7, padding: '7px 14px', fontSize: 12, fontWeight: 700, fontFamily: DS.font, cursor: 'pointer' }}>
+                      {copied ? '✓ Kopiert!' : 'Code kopieren'}
+                    </button>
+                  </div>
+                  <div>
+                    <div style={{ fontWeight: 700, marginBottom: 10, fontSize: 14 }}>So einfach geht's</div>
+                    {['Code teilen', 'Kontakt schließt bee-doo Vertrag ab', '250€ Bonus für Sie'].map((s, i) => (
+                      <div key={i} style={{ display: 'flex', gap: 8, marginBottom: 6, alignItems: 'center' }}>
+                        <div style={{ width: 20, height: 20, borderRadius: '50%', background: DS.yDim, border: `1px solid ${DS.yBd}`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, fontWeight: 700, color: DS.y, flexShrink: 0 }}>{i + 1}</div>
+                        <div style={{ fontSize: 13, color: DS.dm }}>{s}</div>
+                      </div>
+                    ))}
+                    <div style={{ fontSize: 12, color: DS.dm, marginTop: 8 }}>Empfohlen: <span style={{ color: DS.y, fontWeight: 700 }}>{referral_count}</span> · Bonus: <span style={{ color: DS.y, fontWeight: 700 }}>€ {fmt(referral_bonus)}</span></div>
+                  </div>
+                </div>
+              </Card>
             </div>
           )}
         </div>
-      </div>
-    </>
-  );
-}
 
-function SectionTitle({ children, style }: { children: React.ReactNode; style?: React.CSSProperties }) {
-  return <div style={{ fontSize: 17, fontWeight: 800, marginBottom: 16, display: 'flex', alignItems: 'center', gap: 8, ...style }}>{children}</div>;
-}
-function Badge({ children }: { children: React.ReactNode }) {
-  return <span style={{ fontSize: 11, fontWeight: 700, padding: '2px 8px', borderRadius: 100, background: DS.yDim, color: DS.y, border: `1px solid ${DS.yBd}` }}>{children}</span>;
-}
-function Chip({ children, color, dot, pointer, onClick }: { children: React.ReactNode; color: 'y'|'g'|'b'; dot?: boolean; pointer?: boolean; onClick?: () => void }) {
-  const c = { y: { bg: DS.yDim, bd: DS.yBd, tx: DS.y }, g: { bg: DS.greenDim, bd: 'rgba(34,197,94,0.18)', tx: DS.green }, b: { bg: DS.blueDim, bd: 'rgba(59,130,246,0.18)', tx: DS.blue } }[color];
-  return (
-    <div onClick={onClick} style={{ padding: '4px 11px', borderRadius: 100, fontSize: 12, fontWeight: 500, display: 'flex', alignItems: 'center', gap: 5, border: `1px solid ${c.bd}`, background: c.bg, color: c.tx, cursor: pointer ? 'pointer' : 'default' }}>
-      {dot && <span style={{ width: 5, height: 5, borderRadius: '50%', background: 'currentColor' }} />}
-      {children}
+        {/* ─── RIGHT SIDEBAR ─── */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 14, position: 'sticky', top: 80 }}>
+
+          {/* Nächster Termin */}
+          {termin_at && (
+            <Card style={{ padding: 18 }}>
+              <SectionLabel>📅 Ihr nächster Termin</SectionLabel>
+              <div style={{ display: 'flex', gap: 12, alignItems: 'center', marginBottom: 14 }}>
+                <div style={{ background: DS.y, borderRadius: 9, padding: '8px 12px', textAlign: 'center', minWidth: 44, flexShrink: 0 }}>
+                  <div style={{ fontSize: 20, fontWeight: 900, color: '#0a0a0a', lineHeight: 1 }}>{format(new Date(termin_at), 'd', { locale: de })}</div>
+                  <div style={{ fontSize: 9, fontWeight: 700, color: '#0a0a0a' }}>{format(new Date(termin_at), 'MMM', { locale: de })}</div>
+                </div>
+                <div>
+                  <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 2 }}>🕐 {fmtT(termin_at)} Uhr (60min)</div>
+                  <div style={{ fontSize: 12, color: DS.dm }}>📍 Videoanruf</div>
+                  <span style={{ color: DS.y, fontSize: 11, fontWeight: 600, cursor: 'pointer' }}>So funktioniert's →</span>
+                </div>
+              </div>
+              <button disabled style={{ width: '100%', background: DS.c3, border: `1px solid ${DS.bd}`, borderRadius: 8, padding: '10px 0', color: DS.dm, fontFamily: DS.font, fontWeight: 600, fontSize: 13, cursor: 'not-allowed' }}>
+                Videoanruf beitreten →
+              </button>
+              <div style={{ fontSize: 10, color: DS.dm, textAlign: 'center', marginTop: 6 }}>Link verfügbar 24h vorher</div>
+            </Card>
+          )}
+
+          {/* Dachplanung */}
+          <Card style={{ padding: 0, overflow: 'hidden', cursor: 'pointer' }} onClick={() => setTab('system')}>
+            <div style={{ padding: '14px 18px 10px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: '1.2px', textTransform: 'uppercase', color: DS.dm }}>☀️ Ihre Dachplanung</div>
+              <span style={{ color: DS.y, fontSize: 12, fontWeight: 600 }}>›</span>
+            </div>
+            <div style={{ height: 140, position: 'relative' }}>
+              {isAfterBeratung ? (
+                <img src={mapUrl} alt="Dach" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+              ) : (
+                <div style={{ width: '100%', height: '100%', background: DS.c2, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
+                  <span style={{ fontSize: 28 }}>🔒</span>
+                  <div style={{ fontSize: 11, color: DS.dm, textAlign: 'center', padding: '0 16px' }}>Steht nach dem Erstgespräch zur Verfügung</div>
+                </div>
+              )}
+            </div>
+          </Card>
+
+          {/* FAQ */}
+          <Card style={{ padding: 18 }}>
+            <SectionLabel>❓ Häufige Fragen</SectionLabel>
+            {FAQ_ITEMS.map((q, i) => (
+              <div key={i} style={{ borderBottom: i < FAQ_ITEMS.length - 1 ? `1px solid ${DS.bd}` : 'none' }}>
+                <div style={{ padding: '10px 0', display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer', fontSize: 13, fontWeight: 500 }}
+                  onClick={() => setFaqOpen(faqOpen === i ? null : i)}>
+                  {q}
+                  <span style={{ color: DS.dm, fontSize: 16, marginLeft: 8, flexShrink: 0, transform: faqOpen === i ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s' }}>›</span>
+                </div>
+                {faqOpen === i && (
+                  <div style={{ fontSize: 12, color: DS.dm, padding: '0 0 12px', lineHeight: 1.6 }}>
+                    {i === 0 && 'Bitte halten Sie, falls vorhanden, Ihre aktuelle Stromrechnung bereit. Weitere Unterlagen sind nicht erforderlich.'}
+                    {i === 1 && 'Das Erstgespräch dauert ca. 60 Minuten. Wir nehmen uns Zeit für Ihre individuellen Fragen.'}
+                    {i === 2 && 'Ja, Sie können Ihren Termin bis zu 24h vorher über Ihren Berater verschieben.'}
+                  </div>
+                )}
+              </div>
+            ))}
+          </Card>
+
+          {/* Bewertungen */}
+          <Card style={{ padding: 18 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+              <div style={{ background: 'white', borderRadius: 8, padding: '4px 8px', display: 'flex', alignItems: 'center', gap: 4 }}>
+                <Stars n={5} size={12} />
+                <span style={{ fontSize: 11, fontWeight: 700, color: '#0a0a0a' }}>4,8</span>
+              </div>
+              <span style={{ fontSize: 11, color: DS.dm }}>auf Google</span>
+            </div>
+          </Card>
+
+          {/* Prämie */}
+          <div style={{ background: 'linear-gradient(135deg, #1a1a2e, #16213e)', border: `1px solid rgba(245,197,0,0.15)`, borderRadius: DS.radius, padding: 18, cursor: 'pointer' }}
+            onClick={() => setTab('dokumente')}>
+            <div style={{ fontWeight: 800, fontSize: 16, marginBottom: 4 }}>250€ Prämie →</div>
+            <div style={{ fontSize: 12, color: DS.dm, lineHeight: 1.5 }}>Freunde einladen, Stromkosten senken und gemeinsam profitieren.</div>
+          </div>
+        </div>
+      </div>
+
+      {/* ─── FOOTER ─── */}
+      <div style={{ borderTop: `1px solid ${DS.bd}`, padding: '20px 24px', textAlign: 'center', color: DS.dm, fontSize: 12, marginTop: 40 }}>
+        bee-doo GmbH © 2026 · 
+        <a href="/impressum" style={{ color: DS.dm, textDecoration: 'none', marginLeft: 8 }}>Impressum</a> · 
+        <a href="/datenschutz" style={{ color: DS.dm, textDecoration: 'none', marginLeft: 8 }}>Datenschutz</a>
+      </div>
+
+      {/* ─── UPLOAD MODAL ─── */}
+      {uploadModal !== 'closed' && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.75)', zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
+          <div style={{ background: DS.c1, border: `1px solid ${DS.bd}`, borderRadius: 20, padding: 32, maxWidth: 460, width: '100%', position: 'relative' }}>
+            <button onClick={() => setUploadModal('closed')} style={{ position: 'absolute', top: 16, right: 16, background: DS.c2, border: `1px solid ${DS.bd}`, borderRadius: '50%', width: 32, height: 32, color: DS.dm, cursor: 'pointer', fontFamily: DS.font, fontSize: 16 }}>✕</button>
+
+            {/* Intro */}
+            {uploadModal === 'intro' && (
+              <div style={{ textAlign: 'center' }}>
+                <div style={{ fontSize: 56, marginBottom: 16 }}>📄</div>
+                <div style={{ fontWeight: 800, fontSize: 20, marginBottom: 8 }}>Laden Sie Ihre Stromrechnung hoch</div>
+                <div style={{ fontSize: 14, color: DS.dm, lineHeight: 1.6, marginBottom: 28 }}>Helfen Sie uns, Ihr Solar-Angebot vorzubereiten</div>
+                <button onClick={() => setUploadModal('guide')} style={{ width: '100%', background: DS.y, color: '#0a0a0a', border: 'none', borderRadius: 10, padding: '14px 0', fontSize: 15, fontWeight: 700, fontFamily: DS.font, cursor: 'pointer', marginBottom: 12 }}>
+                  Weiter
+                </button>
+                <div style={{ fontSize: 13, color: DS.dm, cursor: 'pointer' }} onClick={() => setUploadModal('closed')}>Nicht jetzt</div>
+              </div>
+            )}
+
+            {/* Anleitung */}
+            {uploadModal === 'guide' && (
+              <div>
+                <button onClick={() => setUploadModal('intro')} style={{ background: 'none', border: 'none', color: DS.y, cursor: 'pointer', fontFamily: DS.font, fontSize: 13, fontWeight: 600, marginBottom: 16, padding: 0 }}>‹ Zurück</button>
+                <div style={{ fontWeight: 800, fontSize: 18, marginBottom: 20, textAlign: 'center' }}>Die richtige Stromrechnung ist:</div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 28 }}>
+                  {[
+                    { icon: '📅', label: 'Aktuell',      desc: 'Nicht älter als 1. Januar 2025.'              },
+                    { icon: '📋', label: 'Vollständig',  desc: 'Jahresabrechnung, keine Abschlagsrechnung.'    },
+                    { icon: '📍', label: 'Adressiert',   desc: 'Mit Liefer- und Postanschrift.'                },
+                    { icon: '#',  label: 'Eindeutig',    desc: 'Mit Zähler- und Messlokationsnummer.'          },
+                  ].map((item, i) => (
+                    <div key={i} style={{ background: DS.c2, border: `1px solid ${DS.bd}`, borderRadius: 10, padding: '12px 16px', display: 'flex', gap: 14, alignItems: 'flex-start' }}>
+                      <div style={{ width: 34, height: 34, borderRadius: 8, background: DS.yDim, border: `1px solid ${DS.yBd}`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16, flexShrink: 0 }}>{item.icon}</div>
+                      <div>
+                        <div style={{ fontWeight: 700, fontSize: 14, marginBottom: 2 }}>{item.label}</div>
+                        <div style={{ fontSize: 12, color: DS.dm }}>{item.desc}</div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                <button onClick={() => setUploadModal('upload')} style={{ width: '100%', background: DS.y, color: '#0a0a0a', border: 'none', borderRadius: 10, padding: '14px 0', fontSize: 15, fontWeight: 700, fontFamily: DS.font, cursor: 'pointer', marginBottom: 12 }}>
+                  Verstanden
+                </button>
+                <div style={{ fontSize: 13, color: DS.dm, textAlign: 'center', cursor: 'pointer' }} onClick={() => setUploadModal('closed')}>Später hochladen</div>
+              </div>
+            )}
+
+            {/* Upload */}
+            {uploadModal === 'upload' && (
+              <div>
+                <button onClick={() => setUploadModal('guide')} style={{ background: 'none', border: 'none', color: DS.y, cursor: 'pointer', fontFamily: DS.font, fontSize: 13, fontWeight: 600, marginBottom: 16, padding: 0 }}>‹ Zurück</button>
+                <div style={{ fontWeight: 800, fontSize: 18, marginBottom: 20, textAlign: 'center' }}>Stromrechnung hochladen</div>
+                <label style={{ display: 'block', border: `2px dashed ${DS.bdHov}`, borderRadius: 12, padding: '36px 24px', textAlign: 'center', cursor: 'pointer', background: DS.c2 }}>
+                  <div style={{ fontSize: 40, marginBottom: 12 }}>⬆️</div>
+                  <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 6 }}>Dateien oder Bilder hier ablegen</div>
+                  <div style={{ fontSize: 12, color: DS.y, fontWeight: 600, marginBottom: 4 }}>oder hier klicken</div>
+                  <div style={{ fontSize: 11, color: DS.dm }}>PDF, JPG, PNG bis zu 10 MB (max. 10 Dateien)</div>
+                  <input type="file" accept=".pdf,.jpg,.jpeg,.png" multiple style={{ display: 'none' }} />
+                </label>
+                <button disabled style={{ width: '100%', background: DS.c3, border: `1px solid ${DS.bd}`, borderRadius: 10, padding: '14px 0', fontSize: 15, fontWeight: 700, fontFamily: DS.font, cursor: 'not-allowed', color: DS.dm, marginTop: 16, marginBottom: 12 }}>
+                  Abschicken
+                </button>
+                <div style={{ fontSize: 13, color: DS.dm, textAlign: 'center', cursor: 'pointer' }} onClick={() => setUploadModal('closed')}>Später hochladen</div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
