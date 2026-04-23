@@ -13,7 +13,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           @font-face{font-family:'DM Sans';font-style:normal;font-weight:700;font-display:swap;src:url('https://cdn.jsdelivr.net/gh/beedoo-ux/bee-doo-tools@main/assets/fonts/dm-sans-700.woff2') format('woff2')}
           @font-face{font-family:'Space Grotesk';font-style:normal;font-weight:700;font-display:swap;src:url('https://cdn.jsdelivr.net/gh/beedoo-ux/bee-doo-tools@main/assets/fonts/space-grotesk-700.woff2') format('woff2')}
           * { box-sizing: border-box; }
-          body { margin: 0; background: #0a0a0a; font-family: 'DM Sans', system-ui, sans-serif; }
+          body { margin: 0; background: #F7F8FB; font-family: 'DM Sans', system-ui, sans-serif; }
         `}} />
       </head>
       <body style={{ margin: 0, padding: 0 }}>{children}</body>

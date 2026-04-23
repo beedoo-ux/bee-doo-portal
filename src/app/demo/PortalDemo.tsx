@@ -12,18 +12,18 @@ import {
 
 // ─── Design System ────────────────────────────────────────────
 const DS = {
-  bg:      '#0a0a0a',
-  c1:      '#141414',
-  c2:      '#1a1a1a',
-  bd:      'rgba(255,255,255,0.06)',
-  tx:      'rgba(255,255,255,0.9)',
-  dm:      'rgba(255,255,255,0.45)',
-  y:       '#F5C500',
-  yDim:    'rgba(245,197,0,0.10)',
-  yBd:     'rgba(245,197,0,0.22)',
-  green:   '#22c55e',
-  greenDim:'rgba(34,197,94,0.10)',
-  blue:    '#3b82f6',
+  bg:      '#F7F8FB',       // hell: warmweißer Canvas
+  c1:      '#FFFFFF',       // Card-Hintergrund
+  c2:      '#F3F4F7',       // subtle Hover/Secondary
+  bd:      'rgba(15,23,42,0.08)', // weiche Trennlinien
+  tx:      '#0F172A',       // Text primary (fast schwarz, angenehm)
+  dm:      '#64748B',       // Text dimmed (slate-500)
+  y:       '#F5C500',       // bee-doo Gold (Akzent)
+  yDim:    'rgba(245,197,0,0.12)',
+  yBd:     'rgba(245,197,0,0.35)',
+  green:   '#10B981',       // frischer Mint-Green
+  greenDim:'rgba(16,185,129,0.10)',
+  blue:    '#3B82F6',       // primary Blue
   blueDim: 'rgba(59,130,246,0.10)',
   font:    "'DM Sans', system-ui, sans-serif",
 };
