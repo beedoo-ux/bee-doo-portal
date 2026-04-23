@@ -25,7 +25,7 @@ const DS = {
   greenDim:'rgba(16,185,129,0.10)',
   blue:    '#3B82F6',       // primary Blue
   blueDim: 'rgba(59,130,246,0.10)',
-  font:    "'DM Sans', system-ui, sans-serif",
+  font:    "'Inter', system-ui, -apple-system, sans-serif",
 };
 
 // ─── Demo Daten ───────────────────────────────────────────────
@@ -738,7 +738,7 @@ export default function PortalDemo() {
         {/* Notifications Banner */}
         <div style={{ background: 'rgba(59,130,246,0.08)', borderBottom: `1px solid rgba(59,130,246,0.2)`, padding: '10px 24px' }}>
           <div style={{ maxWidth: 1100, margin: '0 auto', display: 'flex', alignItems: 'center', gap: 10 }}>
-            <span style={{ fontSize: 18 }}>📢</span>
+            <span style={{ fontSize: 18 }}>●</span>
             <span style={{ color: DS.tx, fontSize: 13 }}>
               <strong style={{ color: DS.blue }}>Neu:</strong> Ihr Installationstermin ist bestätigt — 28. Februar 2025. Das Montageteam kontaktiert Sie 2 Tage vorher.
             </span>
