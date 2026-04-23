@@ -4,7 +4,7 @@
 // Testkunde: Thomas Berger | Paderborn | 9,8 kWp Anlage
 // Design: DM Sans | #0a0a0a | #F5C500
 // =============================================================
-import { useState } from 'react';
+import React, { useState } from 'react';
 import {
   AreaChart, Area, BarChart, Bar,
   XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
@@ -12,7 +12,8 @@ import {
 import {
   ClipboardList, FileText, Zap, Gift, MessageCircle,
   Phone, MessageSquare, Bell, CheckCircle2, Handshake, Plug,
-  Wrench, PartyPopper, ShieldCheck, Lock, Award
+  Wrench, PartyPopper, ShieldCheck, Lock, Award,
+  User, Mail, Clock, Headphones, Check
 } from 'lucide-react';
 
 // ─── Design System ────────────────────────────────────────────
@@ -57,13 +58,13 @@ const PROJECT = {
 };
 
 const MILESTONES = [
-  { id: 1, label: 'Beratung & Angebot',    done: true,  date: '03.11.2024', icon: '🤝' },
-  { id: 2, label: 'Vertrag unterzeichnet', done: true,  date: '08.11.2024', icon: '📋' },
-  { id: 3, label: 'Netzanmeldung',         done: true,  date: '19.11.2024', icon: '🔌' },
-  { id: 4, label: 'Genehmigung erhalten',  done: true,  date: '14.01.2025', icon: '✅' },
-  { id: 5, label: 'Installation',          done: false, date: '28.02.2025', icon: '🔧', active: true },
-  { id: 6, label: 'Inbetriebnahme',        done: false, date: 'Ca. März 2025', icon: '⚡' },
-  { id: 7, label: 'Abnahme & Übergabe',    done: false, date: 'Ca. März 2025', icon: '🎉' },
+  { id: 1, label: 'Beratung & Angebot',    done: true,  date: '03.11.2024',    Icon: Handshake },
+  { id: 2, label: 'Vertrag unterzeichnet', done: true,  date: '08.11.2024',    Icon: ClipboardList },
+  { id: 3, label: 'Netzanmeldung',         done: true,  date: '19.11.2024',    Icon: Plug },
+  { id: 4, label: 'Genehmigung erhalten',  done: true,  date: '14.01.2025',    Icon: CheckCircle2 },
+  { id: 5, label: 'Installation',          done: false, date: '28.02.2025',    Icon: Wrench, active: true },
+  { id: 6, label: 'Inbetriebnahme',        done: false, date: 'Ca. März 2025', Icon: Zap },
+  { id: 7, label: 'Abnahme & Übergabe',    done: false, date: 'Ca. März 2025', Icon: PartyPopper },
 ];
 
 const DOCUMENTS = [
@@ -196,7 +197,7 @@ function StatusTab() {
                   fontWeight: 800,
                   color: m.done ? DS.y : m.active ? DS.blue : DS.dm,
                 }}>
-                  {m.done ? '✓' : m.icon}
+                  {m.done ? <Check size={20} strokeWidth={3} /> : <m.Icon size={18} strokeWidth={1.9} />}
                 </div>
                 {/* Content */}
                 <div style={{ flex: 1, minWidth: 0 }}>
@@ -260,7 +261,7 @@ function DokumenteTab() {
             opacity: d.ready ? 1 : 0.5,
           }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-              <span style={{ fontSize: 22 }}>{d.ready ? '📄' : '🕐'}</span>
+              <span style={{ color: d.ready ? DS.y : DS.dm, display: 'inline-flex' }}>{d.ready ? <FileText size={20} strokeWidth={1.75} /> : <Clock size={20} strokeWidth={1.75} />}</span>
               <div>
                 <div style={{ color: DS.tx, fontSize: 14, fontWeight: 500 }}>{d.name}</div>
                 <div style={{ display: 'flex', gap: 8, marginTop: 4 }}>
@@ -573,11 +574,11 @@ function ReferralTab() {
           </div>
         </div>
         <div style={{ display: 'flex', gap: 10, marginTop: 14 }}>
-          <button onClick={() => { const t = `Hallo! Ich habe meine Solaranlage mit bee-doo installiert und bin begeistert! ☀️\n\nWenn du auch Interesse hast:\n${CUSTOMER.referral_link}\n\nFür jeden Abschluss gibt's Prämien! 🪙`; window.open(`https://wa.me/?text=${encodeURIComponent(t)}`); }} style={{ flex: 1, padding: '12px 16px', borderRadius: 10, background: '#25D366', color: '#fff', border: 'none', fontSize: 14, fontWeight: 700, cursor: 'pointer', fontFamily: DS.font }}>
-            💬 Per WhatsApp teilen
+          <button onClick={() => { const t = `Hallo! Ich habe meine Solaranlage mit bee-doo installiert und bin begeistert! ☀️\n\nWenn du auch Interesse hast:\n${CUSTOMER.referral_link}\n\nFür jeden Abschluss gibt's Prämien! 🪙`; window.open(`https://wa.me/?text=${encodeURIComponent(t)}`); }} style={{ flex: 1, padding: '12px 16px', borderRadius: 10, background: '#25D366', color: '#fff', border: 'none', fontSize: 14, fontWeight: 700, cursor: 'pointer', fontFamily: DS.font, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
+            <MessageSquare size={16} strokeWidth={2.2} /> Per WhatsApp teilen
           </button>
-          <button onClick={() => { window.location.href = `mailto:?subject=bee-doo Solar – Empfehlung&body=${encodeURIComponent(`Hallo,\n\nich kann bee-doo Solar wirklich empfehlen!\n\nHier kannst du ein kostenloses Angebot anfragen:\n${CUSTOMER.referral_link}\n\nViele Grüße`)}`; }} style={{ flex: 1, padding: '12px 16px', borderRadius: 10, background: DS.c2, color: DS.tx, border: `1px solid ${DS.bd}`, fontSize: 14, fontWeight: 700, cursor: 'pointer', fontFamily: DS.font }}>
-            ✉️ Per E-Mail teilen
+          <button onClick={() => { window.location.href = `mailto:?subject=bee-doo Solar – Empfehlung&body=${encodeURIComponent(`Hallo,\n\nich kann bee-doo Solar wirklich empfehlen!\n\nHier kannst du ein kostenloses Angebot anfragen:\n${CUSTOMER.referral_link}\n\nViele Grüße`)}`; }} style={{ flex: 1, padding: '12px 16px', borderRadius: 10, background: DS.c2, color: DS.tx, border: `1px solid ${DS.bd}`, fontSize: 14, fontWeight: 700, cursor: 'pointer', fontFamily: DS.font, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
+            <Mail size={16} strokeWidth={2.2} /> Per E-Mail teilen
           </button>
         </div>
       </Card>
@@ -629,21 +630,21 @@ function SupportTab() {
       <Card>
         <SectionTitle>Ihr persönlicher Ansprechpartner</SectionTitle>
         <div style={{ display: 'flex', alignItems: 'center', gap: 20, padding: '8px 0' }}>
-          <div style={{ width: 64, height: 64, borderRadius: '50%', background: DS.yDim, border: `2px solid ${DS.yBd}`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 28 }}>
-            👤
+          <div style={{ width: 64, height: 64, borderRadius: '50%', background: DS.yDim, border: `2px solid ${DS.yBd}`, display: 'flex', alignItems: 'center', justifyContent: 'center', color: DS.y }}>
+            <User size={30} strokeWidth={1.75} />
           </div>
           <div>
             <div style={{ color: DS.tx, fontWeight: 700, fontSize: 17 }}>Kevin Schreiber</div>
             <div style={{ color: DS.dm, fontSize: 13 }}>Ihr Projektberater bei bee-doo</div>
             <div style={{ display: 'flex', gap: 12, marginTop: 10, flexWrap: 'wrap' }}>
-              <a href="tel:+495251987654" style={{ background: DS.yDim, color: DS.y, border: `1px solid ${DS.yBd}`, padding: '6px 16px', borderRadius: 8, textDecoration: 'none', fontSize: 13, fontWeight: 600 }}>
-                📞 Anrufen
+              <a href="tel:+495251987654" style={{ background: DS.yDim, color: DS.y, border: `1px solid ${DS.yBd}`, padding: '7px 14px', borderRadius: 8, textDecoration: 'none', fontSize: 13, fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                <Phone size={14} strokeWidth={2.1} /> Anrufen
               </a>
-              <a href="mailto:k.schreiber@bee-doo.de" style={{ background: DS.c2, color: DS.tx, border: `1px solid ${DS.bd}`, padding: '6px 16px', borderRadius: 8, textDecoration: 'none', fontSize: 13 }}>
-                ✉️ E-Mail
+              <a href="mailto:k.schreiber@bee-doo.de" style={{ background: DS.c2, color: DS.tx, border: `1px solid ${DS.bd}`, padding: '7px 14px', borderRadius: 8, textDecoration: 'none', fontSize: 13, display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                <Mail size={14} strokeWidth={2} /> E-Mail
               </a>
-              <a href="https://wa.me/49525198765" style={{ background: 'rgba(37,211,102,0.1)', color: '#25d366', border: '1px solid rgba(37,211,102,0.3)', padding: '6px 16px', borderRadius: 8, textDecoration: 'none', fontSize: 13, fontWeight: 600 }}>
-                💬 WhatsApp
+              <a href="https://wa.me/49525198765" style={{ background: 'rgba(37,211,102,0.1)', color: '#25d366', border: '1px solid rgba(37,211,102,0.3)', padding: '7px 14px', borderRadius: 8, textDecoration: 'none', fontSize: 13, fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                <MessageSquare size={14} strokeWidth={2.1} /> WhatsApp
               </a>
             </div>
           </div>
@@ -652,13 +653,13 @@ function SupportTab() {
 
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
         <Card>
-          <div style={{ fontSize: 24, marginBottom: 8 }}>📞</div>
+          <div style={{ color: DS.y, marginBottom: 10 }}><Headphones size={24} strokeWidth={1.75} /></div>
           <div style={{ fontWeight: 600, color: DS.tx, marginBottom: 4 }}>Service Hotline</div>
           <div style={{ color: DS.dm, fontSize: 13, marginBottom: 12 }}>Mo–Fr, 8:00–18:00 Uhr</div>
           <a href="tel:+4952519876540" style={{ color: DS.y, textDecoration: 'none', fontWeight: 700 }}>0525 1987654-0</a>
         </Card>
         <Card>
-          <div style={{ fontSize: 24, marginBottom: 8 }}>🔧</div>
+          <div style={{ color: DS.y, marginBottom: 10 }}><Wrench size={24} strokeWidth={1.75} /></div>
           <div style={{ fontWeight: 600, color: DS.tx, marginBottom: 4 }}>Technischer Support</div>
           <div style={{ color: DS.dm, fontSize: 13, marginBottom: 12 }}>Bei Störungen & Fragen</div>
           <a href="mailto:technik@bee-doo.de" style={{ color: DS.y, textDecoration: 'none', fontWeight: 700 }}>technik@bee-doo.de</a>
@@ -799,8 +800,8 @@ export default function PortalDemo() {
               <div style={{ fontWeight: 600, fontSize: 13, marginBottom: 4 }}>Kevin Schreiber</div>
               <div style={{ color: DS.dm, fontSize: 12 }}>Ihr Berater</div>
               <div style={{ display: 'flex', gap: 8, marginTop: 10 }}>
-                <a href="tel:+4952519876" style={{ flex: 1, background: DS.yDim, color: DS.y, border: `1px solid ${DS.yBd}`, borderRadius: 8, padding: '7px 0', textAlign: 'center', textDecoration: 'none', fontSize: 18 }}>📞</a>
-                <a href="https://wa.me/4952519876" style={{ flex: 1, background: 'rgba(37,211,102,0.1)', color: '#25d366', border: '1px solid rgba(37,211,102,0.2)', borderRadius: 8, padding: '7px 0', textAlign: 'center', textDecoration: 'none', fontSize: 18 }}>💬</a>
+                <a href="tel:+4952519876" style={{ flex: 1, background: DS.yDim, color: DS.y, border: `1px solid ${DS.yBd}`, borderRadius: 8, padding: '9px 0', display: 'flex', alignItems: 'center', justifyContent: 'center', textDecoration: 'none' }} aria-label="Anrufen"><Phone size={17} strokeWidth={2} /></a>
+                <a href="https://wa.me/4952519876" style={{ flex: 1, background: 'rgba(37,211,102,0.1)', color: '#25d366', border: '1px solid rgba(37,211,102,0.2)', borderRadius: 8, padding: '9px 0', display: 'flex', alignItems: 'center', justifyContent: 'center', textDecoration: 'none' }} aria-label="WhatsApp"><MessageSquare size={17} strokeWidth={2} /></a>
               </div>
             </Card>
           </aside>
@@ -814,7 +815,53 @@ export default function PortalDemo() {
             {tab === 'support'    && <SupportTab />}
           </main>
         </div>
+
+        {/* Trust-Footer: Sicherheitsmerkmale + Zertifikate */}
+        <div style={{ maxWidth: 1280, margin: '32px auto 0', padding: '24px 24px 40px' }}>
+          <div style={{
+            background: DS.c1,
+            border: `1px solid ${DS.bd}`,
+            borderRadius: 12,
+            padding: '20px 24px',
+            display: 'grid',
+            gridTemplateColumns: 'repeat(4, 1fr)',
+            gap: 16,
+          }}>
+            <TrustBadge Icon={Lock}        title="256-Bit SSL"          subtitle="Verschlüsselte Verbindung" />
+            <TrustBadge Icon={ShieldCheck} title="DSGVO-konform"         subtitle="Ihre Daten sicher in DE" />
+            <TrustBadge Icon={Award}       title="Meisterbetrieb"        subtitle="HWK-geprüft &amp; zertifiziert" />
+            <TrustBadge Icon={CheckCircle2} title="Handelsblatt"         subtitle="Top-Solaranbieter 2024" />
+          </div>
+          <div style={{
+            textAlign: 'center',
+            fontSize: 11,
+            color: DS.dm,
+            marginTop: 14,
+            letterSpacing: 0.3,
+          }}>
+            bee-doo GmbH &middot; Detmolder Str. 112 &middot; 33100 Paderborn &middot; HRB 19348 &middot; USt-ID: DE356789012
+          </div>
+        </div>
       </div>
     </>
+  );
+}
+
+function TrustBadge({ Icon, title, subtitle }: { Icon: React.ComponentType<{ size?: number; strokeWidth?: number }>; title: string; subtitle: string }) {
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+      <div style={{
+        width: 40, height: 40, borderRadius: 10, flexShrink: 0,
+        background: `${DS.y}18`,
+        color: DS.y,
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+      }}>
+        <Icon size={20} strokeWidth={1.9} />
+      </div>
+      <div style={{ minWidth: 0 }}>
+        <div style={{ fontSize: 13, fontWeight: 700, color: DS.tx, lineHeight: 1.2 }}>{title}</div>
+        <div style={{ fontSize: 11, color: DS.dm, marginTop: 2, lineHeight: 1.3 }}>{subtitle}</div>
+      </div>
+    </div>
   );
 }
