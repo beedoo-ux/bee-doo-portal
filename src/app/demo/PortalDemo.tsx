@@ -13,7 +13,8 @@ import {
   ClipboardList, FileText, Zap, Gift, MessageCircle,
   Phone, MessageSquare, Bell, CheckCircle2, Handshake, Plug,
   Wrench, PartyPopper, ShieldCheck, Lock, Award,
-  User, Mail, Clock, Headphones, Check
+  User, Mail, Clock, Headphones, Check,
+  Package, Sun, Battery, Cpu
 } from 'lucide-react';
 
 // ─── Design System ────────────────────────────────────────────
@@ -107,6 +108,7 @@ const REFERRALS = [
 
 const TABS = [
   { id: 'status',     Icon: ClipboardList, label: 'Projektstatus' },
+  { id: 'system',     Icon: Package,       label: 'Ihr System'    },
   { id: 'dokumente',  Icon: FileText,      label: 'Dokumente'     },
   { id: 'monitoring', Icon: Zap,           label: 'Monitoring'    },
   { id: 'referral',   Icon: Gift,          label: 'Empfehlen'     },
@@ -624,6 +626,161 @@ function ReferralTab() {
   );
 }
 
+function SystemTab() {
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+      <Card>
+        <SectionTitle>Ihr System in Paderborn</SectionTitle>
+        <p style={{ color: DS.dm, fontSize: 14, marginTop: -8, marginBottom: 20, lineHeight: 1.6 }}>
+          Premium-Hardware von Weltmarktführern — auf Wunsch komplett bei bee-doo geplant und installiert.
+          Alle Komponenten bilden ein aufeinander abgestimmtes Gesamtsystem.
+        </p>
+
+        {/* Produkt-Grid */}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 16 }}>
+          <ProductCard
+            img="/products/aiko-modul.webp"
+            Icon={Sun}
+            kicker="Photovoltaik-Module"
+            title="AIKO Neostar 2S+"
+            specs={[
+              ['Anzahl', '24 Module'],
+              ['Leistung pro Modul', '480 Wp'],
+              ['Gesamtleistung', '9,8 kWp'],
+              ['Produktgarantie', '30 Jahre'],
+              ['Wirkungsgrad', '23,8 %'],
+              ['Optik', 'Vollschwarz (Full-Black)'],
+            ]}
+          />
+          <ProductCard
+            img="/products/fox-speicher.webp"
+            Icon={Battery}
+            kicker="Batteriespeicher"
+            title="FOX ESS Energy Cube 10"
+            specs={[
+              ['Nutzbare Kapazität', '10,0 kWh'],
+              ['Zelltechnologie', 'LFP (lithium-eisen-phosphat)'],
+              ['Ladezyklen', '> 6.000'],
+              ['Garantie', '10 Jahre / 12.000 Zyklen'],
+              ['Notstromfähig', 'Ja (Black-Start)'],
+              ['Erweiterbar', 'Ja, modular bis 40 kWh'],
+            ]}
+          />
+          <ProductCard
+            img="/products/montage.webp"
+            Icon={Cpu}
+            kicker="Montagesystem"
+            title="Aluminium-Ziegelsystem"
+            specs={[
+              ['Schienenmaterial', 'Eloxiertes Aluminium'],
+              ['Haken', 'Edelstahl V2A'],
+              ['Windlast-zertifiziert', 'bis Zone 4'],
+              ['Rücklagenfrei auf Ziegel', 'Ja'],
+              ['Montagezeit', '1 Arbeitstag'],
+              ['Meisterbetrieb-Installation', 'Ja, von bee-doo Partner'],
+            ]}
+          />
+          <ProductCard
+            img="/products/waermepumpe.webp"
+            Icon={Zap}
+            kicker="Optional: Wärmepumpe"
+            title="Tecalor Luft-Wasser-WP"
+            specs={[
+              ['Modell', 'Tecalor THZ 304 Eco'],
+              ['Heizleistung', 'bis 10 kW'],
+              ['SCOP', '4,7 (sehr hoch)'],
+              ['Schallpegel außen', '52 dB(A)'],
+              ['Kompatibel mit PV', 'Ja, direkt steuerbar'],
+              ['Status', 'Interesse hinterlegt'],
+            ]}
+          />
+        </div>
+      </Card>
+
+      {/* Montage-Galerie Teaser */}
+      <Card>
+        <SectionTitle>So sieht Ihre Montage aus</SectionTitle>
+        <p style={{ color: DS.dm, fontSize: 13, marginTop: -8, marginBottom: 16 }}>
+          Beispielbilder aus vergleichbaren Paderborner Projekten. Am Montagetag bekommen Sie eigene Fotos in diese Galerie.
+        </p>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 12 }}>
+          <GalleryTile img="/products/energiehaus.webp" label="Komplett-System (Anlage + Speicher + Wallbox)" />
+          <GalleryTile img="/products/montage.webp"     label="Montage-Tag: 1 Arbeitstag inkl. Gerüst" />
+        </div>
+      </Card>
+    </div>
+  );
+}
+
+function ProductCard({
+  img, Icon, kicker, title, specs,
+}: {
+  img: string;
+  Icon: React.ComponentType<{ size?: number; strokeWidth?: number; color?: string }>;
+  kicker: string;
+  title: string;
+  specs: [string, string][];
+}) {
+  return (
+    <div style={{
+      background: DS.c2,
+      border: `1px solid ${DS.bd}`,
+      borderRadius: 12,
+      overflow: 'hidden',
+      display: 'flex', flexDirection: 'column',
+    }}>
+      {/* Bild-Hero */}
+      <div style={{
+        aspectRatio: '16/10',
+        background: `#FFFFFF url(${img}) center/contain no-repeat`,
+        borderBottom: `1px solid ${DS.bd}`,
+      }} />
+      {/* Text */}
+      <div style={{ padding: '16px 18px 18px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
+          <Icon size={14} strokeWidth={2.1} color={DS.y} />
+          <span style={{ fontSize: 11, fontWeight: 700, color: DS.dm, letterSpacing: '0.08em', textTransform: 'uppercase' }}>
+            {kicker}
+          </span>
+        </div>
+        <div style={{ fontSize: 17, fontWeight: 700, color: DS.tx, marginBottom: 12 }}>{title}</div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+          {specs.map(([k, v]) => (
+            <div key={k} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, gap: 8 }}>
+              <span style={{ color: DS.dm }}>{k}</span>
+              <span style={{ color: DS.tx, fontWeight: 500, textAlign: 'right' }}>{v}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function GalleryTile({ img, label }: { img: string; label: string }) {
+  return (
+    <div style={{
+      aspectRatio: '16/9',
+      background: `#0a0a0a url(${img}) center/cover no-repeat`,
+      borderRadius: 10,
+      border: `1px solid ${DS.bd}`,
+      position: 'relative',
+      overflow: 'hidden',
+    }}>
+      <div style={{
+        position: 'absolute', left: 0, right: 0, bottom: 0,
+        padding: '10px 14px',
+        background: 'linear-gradient(180deg, rgba(0,0,0,0) 0%, rgba(0,0,0,0.65) 100%)',
+        color: '#fff',
+        fontSize: 12,
+        fontWeight: 500,
+      }}>
+        {label}
+      </div>
+    </div>
+  );
+}
+
 function SupportTab() {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
@@ -809,6 +966,7 @@ export default function PortalDemo() {
           {/* Content */}
           <main>
             {tab === 'status'     && <StatusTab />}
+            {tab === 'system'     && <SystemTab />}
             {tab === 'dokumente'  && <DokumenteTab />}
             {tab === 'monitoring' && <MonitoringTab />}
             {tab === 'referral'   && <ReferralTab />}
