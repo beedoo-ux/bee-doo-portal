@@ -14,7 +14,7 @@ import {
   Phone, MessageSquare, Bell, CheckCircle2, Handshake, Plug,
   Wrench, PartyPopper, ShieldCheck, Lock, Award,
   User, Mail, Clock, Headphones, Check,
-  Package, Sun, Battery, Cpu, MapPin
+  Package, Sun, Battery, Cpu, MapPin, Home, ArrowRight
 } from 'lucide-react';
 
 // ─── Design System ────────────────────────────────────────────
@@ -394,6 +394,22 @@ function MonitoringTab() {
           </Card>
         ))}
       </div>
+
+      {/* Live Energy-Flow — PV → Haus → Speicher/Netz */}
+      <Card>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 18, gap: 12, flexWrap: 'wrap' }}>
+          <div>
+            <SectionTitle>Energiefluss — Live</SectionTitle>
+            <div style={{ color: DS.dm, fontSize: 13, marginTop: -8 }}>Momentaufnahme: Ihre Anlage produziert gerade <strong style={{ color: DS.y }}>8,4 kW</strong></div>
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '4px 10px', borderRadius: 20, background: DS.greenDim, border: `1px solid rgba(16,185,129,0.2)` }}>
+            <span style={{ width: 7, height: 7, borderRadius: '50%', background: DS.green, animation: 'pulse 1.6s ease infinite' }} />
+            <span style={{ fontSize: 11, fontWeight: 700, color: DS.green, letterSpacing: '0.1em', textTransform: 'uppercase' }}>Live · aktualisiert</span>
+          </div>
+        </div>
+
+        <EnergyFlow />
+      </Card>
 
       <Card>
         <SectionTitle>Erzeugung (kWh / Monat)</SectionTitle>
@@ -840,6 +856,139 @@ function ProductCard({
           ))}
         </div>
       </div>
+    </div>
+  );
+}
+
+function EnergyFlow() {
+  // Realistisches Zahlen-Setup (sonniger Nachmittag, Speicher fast voll, Haus verbraucht mittel)
+  const pv = 8.4;       // kW Erzeugung
+  const house = 2.1;    // kW Verbrauch
+  const battery = 3.0;  // kW Speicher-Laden (+)
+  const grid = 3.3;     // kW Netz-Einspeisung (+)
+  const batteryLevel = 82; // % SoC
+  const batteryKwh = 8.2;  // kWh aktuell
+
+  return (
+    <div style={{
+      position: 'relative',
+      display: 'grid',
+      gridTemplateColumns: '1fr 1fr 1fr',
+      gridTemplateRows: 'auto auto auto',
+      gap: 0,
+      padding: '12px 0 0',
+      minHeight: 340,
+    }} className="bd-flow">
+      <style>{`
+        @keyframes pulse {
+          0%,100% { opacity: 1; transform: scale(1); }
+          50%     { opacity: 0.4; transform: scale(1.25); }
+        }
+        @keyframes dashFlow {
+          from { stroke-dashoffset: 0; }
+          to   { stroke-dashoffset: -40; }
+        }
+        .bd-flow-line { stroke-dasharray: 6 6; animation: dashFlow 1.6s linear infinite; }
+        .bd-flow-line-rev { stroke-dasharray: 6 6; animation: dashFlow 1.6s linear infinite reverse; }
+        @media (max-width: 700px) {
+          .bd-flow { grid-template-columns: 1fr !important; min-height: auto !important; }
+          .bd-flow svg { display: none; }
+          .bd-flow-node { margin: 8px 0 !important; }
+        }
+      `}</style>
+
+      {/* SVG connectors (absolut positioniert, liegen unter den Nodes) */}
+      <svg viewBox="0 0 900 340" preserveAspectRatio="none" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', pointerEvents: 'none' }}>
+        {/* PV (oben mitte, 450,60) → Haus (mitte, 450,200) */}
+        <path d="M 450 90 L 450 170" stroke={DS.y} strokeWidth="3" fill="none" className="bd-flow-line" />
+        {/* Haus → Speicher (rechts, 750,200) */}
+        <path d="M 530 200 L 690 200" stroke={DS.green} strokeWidth="3" fill="none" className="bd-flow-line" />
+        {/* Haus → Netz (links, 150,200) */}
+        <path d="M 370 200 L 210 200" stroke={DS.blue} strokeWidth="3" fill="none" className="bd-flow-line-rev" />
+      </svg>
+
+      {/* PV Node (Top Center) */}
+      <div />
+      <FlowNode
+        Icon={Sun} label="Photovoltaik" value={`${pv.toFixed(1)} kW`} sub="Erzeugung jetzt"
+        color={DS.y} bg={DS.yDim} border={DS.yBd}
+        style={{ gridColumn: '2', gridRow: '1', justifySelf: 'center' }}
+      />
+      <div />
+
+      {/* Row 2: Netz (left) — Haus (center) — Speicher (right) */}
+      <FlowNode
+        Icon={Plug} label="Netz" value={`${grid.toFixed(1)} kW`} sub="Einspeisung (+)"
+        color={DS.blue} bg={DS.blueDim} border="rgba(59,130,246,0.3)"
+        style={{ gridColumn: '1', gridRow: '2', justifySelf: 'center', alignSelf: 'center' }}
+      />
+      <FlowNode
+        Icon={Home} label="Ihr Haushalt" value={`${house.toFixed(1)} kW`} sub="Aktueller Verbrauch"
+        color={DS.tx} bg="#F3F4F7" border={DS.bd}
+        style={{ gridColumn: '2', gridRow: '2', justifySelf: 'center', alignSelf: 'center' }}
+        emphasis
+      />
+      <FlowNode
+        Icon={Battery} label="Speicher" value={`${battery.toFixed(1)} kW`} sub={`${batteryLevel}% · ${batteryKwh} kWh`}
+        color={DS.green} bg={DS.greenDim} border="rgba(16,185,129,0.3)"
+        style={{ gridColumn: '3', gridRow: '2', justifySelf: 'center', alignSelf: 'center' }}
+      />
+
+      {/* Row 3: Balance-Chip */}
+      <div style={{ gridColumn: '1 / -1', gridRow: '3', display: 'flex', justifyContent: 'center', marginTop: 18 }}>
+        <div style={{ display: 'flex', gap: 18, padding: '10px 16px', background: '#F3F4F7', borderRadius: 10, border: `1px solid ${DS.bd}`, fontSize: 12, flexWrap: 'wrap', justifyContent: 'center' }}>
+          <span><strong style={{ color: DS.y }}>{pv.toFixed(1)} kW</strong> <span style={{ color: DS.dm }}>erzeugt</span></span>
+          <span style={{ color: DS.dm }}>=</span>
+          <span><strong style={{ color: DS.tx }}>{house.toFixed(1)} kW</strong> <span style={{ color: DS.dm }}>Haus</span></span>
+          <span style={{ color: DS.dm }}>+</span>
+          <span><strong style={{ color: DS.green }}>{battery.toFixed(1)} kW</strong> <span style={{ color: DS.dm }}>Speicher</span></span>
+          <span style={{ color: DS.dm }}>+</span>
+          <span><strong style={{ color: DS.blue }}>{grid.toFixed(1)} kW</strong> <span style={{ color: DS.dm }}>Netz</span></span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function FlowNode({
+  Icon, label, value, sub, color, bg, border, style, emphasis,
+}: {
+  Icon: React.ComponentType<{ size?: number; strokeWidth?: number; color?: string }>;
+  label: string;
+  value: string;
+  sub: string;
+  color: string;
+  bg: string;
+  border: string;
+  style?: React.CSSProperties;
+  emphasis?: boolean;
+}) {
+  const size = emphasis ? 160 : 140;
+  return (
+    <div className="bd-flow-node" style={{
+      ...style,
+      position: 'relative',
+      zIndex: 2,
+      width: size,
+      padding: '14px 12px',
+      background: '#FFFFFF',
+      borderRadius: 14,
+      border: `2px solid ${border}`,
+      boxShadow: emphasis ? '0 8px 24px rgba(15,23,42,0.08)' : '0 2px 8px rgba(15,23,42,0.04)',
+      textAlign: 'center',
+    }}>
+      <div style={{
+        width: 44, height: 44, margin: '0 auto 8px',
+        borderRadius: 12,
+        background: bg,
+        color,
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+      }}>
+        <Icon size={22} strokeWidth={2} />
+      </div>
+      <div style={{ fontSize: 11, color: '#64748B', letterSpacing: '0.06em', textTransform: 'uppercase', fontWeight: 700 }}>{label}</div>
+      <div style={{ fontSize: emphasis ? 22 : 20, fontWeight: 800, color, marginTop: 2 }}>{value}</div>
+      <div style={{ fontSize: 11, color: '#64748B', marginTop: 2 }}>{sub}</div>
     </div>
   );
 }
