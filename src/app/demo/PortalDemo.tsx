@@ -14,7 +14,7 @@ import {
   Phone, MessageSquare, Bell, CheckCircle2, Handshake, Plug,
   Wrench, PartyPopper, ShieldCheck, Lock, Award,
   User, Mail, Clock, Headphones, Check,
-  Package, Sun, Battery, Cpu
+  Package, Sun, Battery, Cpu, MapPin
 } from 'lucide-react';
 
 // ─── Design System ────────────────────────────────────────────
@@ -126,6 +126,15 @@ const statusMap: Record<string, { label: string; color: string; bg: string }> = 
 };
 
 // ─── Sub-Components ───────────────────────────────────────────
+function InfoRow({ label, value }: { label: string; value: string }) {
+  return (
+    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: 12, borderBottom: `1px dashed rgba(15,23,42,0.08)`, paddingBottom: 6 }}>
+      <span style={{ fontSize: 12, color: '#64748B' }}>{label}</span>
+      <span style={{ fontSize: 13, color: '#0F172A', fontWeight: 500, textAlign: 'right' }}>{value}</span>
+    </div>
+  );
+}
+
 function Card({ children, style }: { children: React.ReactNode; style?: React.CSSProperties }) {
   return (
     <div style={{ background: DS.c1, border: `1px solid ${DS.bd}`, borderRadius: 12, padding: '20px 24px', ...style }}>
@@ -220,6 +229,32 @@ function StatusTab() {
               </div>
             );
           })}
+        </div>
+      </Card>
+
+      {/* Satellite + Address */}
+      <Card style={{ padding: 0, overflow: 'hidden' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: '1.25fr 1fr', gap: 0 }}>
+          <div style={{ position: 'relative', minHeight: 280, background: '#e5e7eb' }}>
+            <iframe
+              src="https://maps.google.com/maps?q=Detmolder+Str.+112,+33100+Paderborn&t=k&z=19&ie=UTF8&iwloc=&output=embed"
+              loading="lazy"
+              style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', border: 0 }}
+              title="Satellitenansicht Ihrer Installationsadresse"
+            />
+          </div>
+          <div style={{ padding: '24px 24px 22px', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10, color: DS.dm, fontSize: 11, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase' }}>
+              <MapPin size={14} strokeWidth={2.1} color={DS.y} /> Installationsadresse
+            </div>
+            <div style={{ fontSize: 18, fontWeight: 700, color: DS.tx, lineHeight: 1.35 }}>{PROJECT.address}</div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginTop: 18 }}>
+              <InfoRow label="Ausrichtung" value="Süd-Süd-West · 12° Dachneigung" />
+              <InfoRow label="Dachfläche" value="84 m² (nutzbar: 58 m²)" />
+              <InfoRow label="Gebäude" value="Einfamilienhaus · Baujahr 1998" />
+              <InfoRow label="Anfahrt Montage-Team" value="ca. 25 Min ab Zentrallager" />
+            </div>
+          </div>
         </div>
       </Card>
 
@@ -839,6 +874,65 @@ function SupportTab() {
           </details>
         ))}
       </Card>
+
+      {/* Video-Testimonials — echte Kunden erzählen */}
+      <Card>
+        <SectionTitle>Kunden erzählen ihre Geschichte</SectionTitle>
+        <p style={{ color: DS.dm, fontSize: 13, marginTop: -8, marginBottom: 16 }}>
+          Drei bee-doo Kunden, drei Projekte, drei ehrliche Meinungen. Klicken Sie rein — die Videos starten nicht automatisch.
+        </p>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 14 }}>
+          <TestimonialVideo
+            guid="34d3ccc5-2797-4d33-9957-53716d2baa50"
+            name="Carolin Mack"
+            place="Borchen"
+            teaser="Vom Termin bis zur Inbetriebnahme — alles aus einer Hand."
+          />
+          <TestimonialVideo
+            guid="e766b81a-0366-42b0-a41d-aeb70f5b55a5"
+            name="Roland Jaesch"
+            place="Hameln"
+            teaser="Beratung war transparent, Preis fair, Montage sauber."
+          />
+          <TestimonialVideo
+            guid="eae68877-ba02-4563-85ce-a5181b2df17c"
+            name="Barbara Knost"
+            place="Nordrhein-Westfalen"
+            teaser="Kein Verkaufsdruck, stattdessen echtes Zuhören."
+          />
+        </div>
+      </Card>
+    </div>
+  );
+}
+
+function TestimonialVideo({ guid, name, place, teaser }: { guid: string; name: string; place: string; teaser: string }) {
+  const src = `https://iframe.mediadelivery.net/embed/626851/${guid}?autoplay=false&preload=true&responsive=true`;
+  return (
+    <div style={{
+      background: DS.c2,
+      border: `1px solid ${DS.bd}`,
+      borderRadius: 12,
+      overflow: 'hidden',
+      display: 'flex', flexDirection: 'column',
+    }}>
+      <div style={{ position: 'relative', width: '100%', aspectRatio: '16/9', background: '#000' }}>
+        <iframe
+          src={src}
+          loading="lazy"
+          allow="accelerometer; gyroscope; autoplay; encrypted-media; picture-in-picture;"
+          allowFullScreen
+          style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', border: 0 }}
+          title={`Kundenstimme ${name}`}
+        />
+      </div>
+      <div style={{ padding: '12px 14px 14px' }}>
+        <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, marginBottom: 4 }}>
+          <span style={{ fontSize: 14, fontWeight: 700, color: DS.tx }}>{name}</span>
+          <span style={{ fontSize: 12, color: DS.dm }}>· {place}</span>
+        </div>
+        <p style={{ margin: 0, fontSize: 12.5, color: DS.dm, lineHeight: 1.5 }}>&bdquo;{teaser}&ldquo;</p>
+      </div>
     </div>
   );
 }
