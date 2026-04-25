@@ -626,7 +626,7 @@ export default function PortalClient({ snapshot, milestones, documents, monitori
 
               {/* Empfehlen */}
               <Card>
-                <SectionLabel>🎁 Freunde empfehlen & 250€ sichern</SectionLabel>
+                <SectionLabel>🎁 Freunde empfehlen & 500€ + 200€ sichern</SectionLabel>
                 <div style={{ display: 'flex', gap: 20, alignItems: 'center' }}>
                   <div style={{ background: DS.yDim, border: `1px solid ${DS.yBd}`, borderRadius: 12, padding: '14px 24px', textAlign: 'center', flexShrink: 0 }}>
                     <div style={{ fontSize: 10, color: DS.dm, textTransform: 'uppercase', letterSpacing: 1, marginBottom: 6 }}>Ihr Code</div>
@@ -637,7 +637,7 @@ export default function PortalClient({ snapshot, milestones, documents, monitori
                   </div>
                   <div>
                     <div style={{ fontWeight: 700, marginBottom: 10, fontSize: 14 }}>So einfach geht's</div>
-                    {['Code teilen', 'Kontakt schließt bee-doo Vertrag ab', '250€ Bonus für Sie'].map((s, i) => (
+                    {['Code teilen', 'Kontakt schließt bee-doo Vertrag ab', '500€ für Sie + 200€ für Ihren Freund'].map((s, i) => (
                       <div key={i} style={{ display: 'flex', gap: 8, marginBottom: 6, alignItems: 'center' }}>
                         <div style={{ width: 20, height: 20, borderRadius: '50%', background: DS.yDim, border: `1px solid ${DS.yBd}`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, fontWeight: 700, color: DS.y, flexShrink: 0 }}>{i + 1}</div>
                         <div style={{ fontSize: 13, color: DS.dm }}>{s}</div>
@@ -729,8 +729,8 @@ export default function PortalClient({ snapshot, milestones, documents, monitori
           {/* Prämie */}
           <div style={{ background: 'linear-gradient(135deg, #1a1a2e, #16213e)', border: `1px solid rgba(245,197,0,0.15)`, borderRadius: DS.radius, padding: 18, cursor: 'pointer' }}
             onClick={() => setTab('dokumente')}>
-            <div style={{ fontWeight: 800, fontSize: 16, marginBottom: 4 }}>250€ Prämie →</div>
-            <div style={{ fontSize: 12, color: DS.dm, lineHeight: 1.5 }}>Freunde einladen, Stromkosten senken und gemeinsam profitieren.</div>
+            <div style={{ fontWeight: 800, fontSize: 16, marginBottom: 4 }}>500€ + 200€ Prämie →</div>
+            <div style={{ fontSize: 12, color: DS.dm, lineHeight: 1.5 }}>500€ Geschenkgutschein für Sie + 200€ Stromrabatt für Ihren Freund. 9 von 10 Kunden empfehlen uns weiter.</div>
           </div>
         </div>
       </div>
